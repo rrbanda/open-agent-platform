@@ -13,15 +13,9 @@ from langchain_core.tools import tool
 from datetime import datetime, timedelta
 
 try:
-    from mortgage_processor.utils.db import get_neo4j_connection, initialize_connection
-    from database.application_data import retrieve_application_data, update_application_status, ApplicationStatusUpdate
+    from mortgage_processor.utils.db import get_neo4j_connection, initialize_connection, get_application_data, update_application_status
 except ImportError:
-    from ....utils.db import get_neo4j_connection, initialize_connection
-    # Fallback import for agentic storage
-    import sys
-    from pathlib import Path
-    sys.path.append(str(Path(__file__).parent.parent.parent.parent.parent.parent))
-    from database.application_data import retrieve_application_data, update_application_status, ApplicationStatusUpdate
+    from ....utils.db import get_neo4j_connection, initialize_connection, get_application_data, update_application_status
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +113,7 @@ def track_application_status(status_request: str) -> str:
             status_rules = [parse_neo4j_rule(dict(record['rule'])) for record in result]
         
         # 🤖 AGENTIC RETRIEVAL: Get real application data from Neo4j
-        app_retrieval = retrieve_application_data(application_id)
+        app_retrieval = get_application_data(application_id)
         
         # Generate status tracking report
         status_report = []
@@ -206,21 +200,21 @@ def track_application_status(status_request: str) -> str:
                 
                 # 🤖 AGENTIC UPDATE: Store status change in Neo4j
                 try:
-                    status_update = ApplicationStatusUpdate(
-                        application_id=application_id,
-                        new_status=new_status,
-                        agent_name=agent_name or "ApplicationAgent",
-                        status_notes=status_notes,
-                        completion_percentage=completion_percentage,
-                        milestone_reached=milestone_reached
-                    )
+                    # Create status notes combining all information
+                    notes = f"Agent: {agent_name or 'ApplicationAgent'}"
+                    if status_notes:
+                        notes += f", Notes: {status_notes}"
+                    if completion_percentage:
+                        notes += f", Completion: {completion_percentage}%"
+                    if milestone_reached:
+                        notes += f", Milestone: {milestone_reached}"
                     
-                    update_success, update_result = update_application_status(status_update)
+                    update_success = update_application_status(application_id, new_status, notes)
                     
                     if update_success:
-                        status_report.append(f"✅ AGENTIC UPDATE: {update_result}")
+                        status_report.append(f"✅ AGENTIC UPDATE: Status updated to {new_status}")
                     else:
-                        status_report.append(f"⚠️ UPDATE WARNING: {update_result}")
+                        status_report.append(f"⚠️ UPDATE WARNING: Failed to update status")
                         
                 except Exception as update_error:
                     logger.warning(f"Agentic status update failed: {update_error}")

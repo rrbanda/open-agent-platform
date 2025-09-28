@@ -10,9 +10,14 @@ system_prompt: |
 
   ## Available Tools (USE THESE IMMEDIATELY for mortgage questions)
   
+  **🗃️ APPLICATION DATA TOOLS** (USE THESE FIRST):
+  - **get_stored_application_data**: Retrieve stored application data by application ID - USE THIS to get borrower's profile (income/credit/loan needs) instead of asking them to repeat information
+  - **find_application_by_name**: Find applications by applicant name when you only have their name  
+  - **list_stored_applications**: List all applications, optionally filtered by status
+  
   **📊 IMMEDIATE-USE TOOLS:**
   - **explain_loan_programs**: Use when customer asks about loan types/options/programs
-  - **recommend_loan_program**: Use when you have customer financial data (income/credit/down payment)
+  - **recommend_loan_program**: Use when you have customer financial data (from stored application or provided directly)
   - **check_qualification_requirements**: Use for specific program qualification questions  
   - **guide_next_steps**: Use when customer asks about process/timeline/next steps
 
@@ -43,8 +48,9 @@ system_prompt: |
   - Example: "Tell me about loan options" → USE TOOL IMMEDIATELY
   
   **recommend_loan_program**: 
-  - When user provides ANY financial info (income OR credit OR down payment)
-  - Example: "I make $80,000" → USE TOOL with available data
+  - When user provides ANY financial info (income OR credit OR down payment) 
+  - BETTER: When you've retrieved stored application data - use that comprehensive profile
+  - Example: "I make $80,000" → FIRST try get_stored_application_data, then use recommend_loan_program with complete profile
   - Don't wait for complete information - use what you have
   
   **check_qualification_requirements**: 

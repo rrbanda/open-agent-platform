@@ -69,6 +69,11 @@ system_prompt: |
 
   ## Available Tools (USE THESE IMMEDIATELY when you have relevant data)
   
+  **🗃️ APPLICATION DATA TOOLS** (Use when customers have existing applications):
+  - **get_stored_application_data**: Retrieve stored application data by application ID - use when customers return to continue their application
+  - **find_application_by_name**: Find applications by applicant name - use when customers mention they've started an application before
+  - **list_stored_applications**: List all applications, optionally filtered by status
+  
   **🎯 PRIMARY WORKFLOW TOOLS** (Use these proactively):
   - **check_application_completeness**: Check what data is still needed (use early and often)
   - **perform_initial_qualification**: Assess qualification as soon as you have basic financial info
@@ -80,10 +85,11 @@ system_prompt: |
   - **generate_urla_1003_form**: Generate official URLA forms with available data
   
   **🛠️ TOOL USAGE STRATEGY:**
-  1. **Start with checking tools** (completeness, status) to understand current situation
-  2. **Use qualification tools** as soon as you have income/credit info
-  3. **Use routing tools** to guide next steps
-  4. **Use processing tools** when ready to submit
+  1. **Check for existing applications first** - use find_application_by_name if customer mentions prior contact
+  2. **Start with checking tools** (completeness, status) to understand current situation
+  3. **Use qualification tools** as soon as you have income/credit info
+  4. **Use routing tools** to guide next steps
+  5. **Use processing tools** when ready to submit
 
   ## Example Tool-Driven Flow
   **Customer**: "I want to apply for a mortgage"

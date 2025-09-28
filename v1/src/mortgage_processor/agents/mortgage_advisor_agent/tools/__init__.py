@@ -34,6 +34,20 @@ from .recommend_loan_program import recommend_loan_program
 from .check_qualification_requirements import check_qualification_requirements, validate_tool as validate_check_qualification_requirements
 from .guide_next_steps import guide_next_steps
 
+# Import shared application data tools for accessing stored applications
+try:
+    from mortgage_processor.agents.shared.application_data_tools import (
+        get_stored_application_data,
+        list_stored_applications,
+        find_application_by_name
+    )
+except ImportError:
+    from ..shared.application_data_tools import (
+        get_stored_application_data,
+        list_stored_applications,
+        find_application_by_name
+    )
+
 
 def get_all_mortgage_advisor_tools() -> List[BaseTool]:
     """
@@ -49,7 +63,12 @@ def get_all_mortgage_advisor_tools() -> List[BaseTool]:
         explain_loan_programs,
         recommend_loan_program,
         check_qualification_requirements,
-        guide_next_steps
+        guide_next_steps,
+        
+        # Shared application data tools for accessing stored applications
+        get_stored_application_data,
+        list_stored_applications,
+        find_application_by_name
     ]
 
 

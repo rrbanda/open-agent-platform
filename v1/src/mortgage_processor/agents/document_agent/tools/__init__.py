@@ -12,6 +12,20 @@ from .get_document_status import get_document_status
 from .verify_document_completeness import verify_document_completeness
 from .validate_identity_document import validate_identity_document
 
+# Import shared application data tools for accessing stored applications
+try:
+    from mortgage_processor.agents.shared.application_data_tools import (
+        get_stored_application_data,
+        list_stored_applications,
+        find_application_by_name
+    )
+except ImportError:
+    from ..shared.application_data_tools import (
+        get_stored_application_data,
+        list_stored_applications,
+        find_application_by_name
+    )
+
 
 def get_all_document_agent_tools():
     """
@@ -26,7 +40,12 @@ def get_all_document_agent_tools():
         process_uploaded_document,
         get_document_status,
         verify_document_completeness,
-        validate_identity_document
+        validate_identity_document,
+        
+        # Shared application data tools for accessing stored applications
+        get_stored_application_data,
+        list_stored_applications,
+        find_application_by_name
     ]
 
 

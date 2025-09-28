@@ -31,13 +31,26 @@ from typing import List, Dict, Any
 from langchain_core.tools import BaseTool
 
 # Import all implemented tools - 100% data-driven from Neo4j
-# Temporarily commented out due to import issues - will fix after containerization
-# from .receive_mortgage_application import receive_mortgage_application, validate_tool as validate_receive_mortgage_application
+from .receive_mortgage_application import receive_mortgage_application, validate_tool as validate_receive_mortgage_application
 from .check_application_completeness import check_application_completeness, validate_tool as validate_check_application_completeness
 from .perform_initial_qualification import perform_initial_qualification, validate_tool as validate_perform_initial_qualification
 from .coordinate_workflow_routing import coordinate_workflow_routing, validate_tool as validate_coordinate_workflow_routing
 from .track_application_status import track_application_status, validate_tool as validate_track_application_status
 from .generate_urla_1003_form import generate_urla_1003_form, validate_tool as validate_generate_urla_1003_form
+
+# Import shared application data tools for all agents
+try:
+    from mortgage_processor.agents.shared.application_data_tools import (
+        get_stored_application_data,
+        list_stored_applications,
+        find_application_by_name
+    )
+except ImportError:
+    from ..shared.application_data_tools import (
+        get_stored_application_data,
+        list_stored_applications,
+        find_application_by_name
+    )
 
 
 def get_all_application_agent_tools() -> List[BaseTool]:
@@ -53,12 +66,17 @@ def get_all_application_agent_tools() -> List[BaseTool]:
     - URLA Form 1003 generation and compliance (generate_urla_1003_form)
     """
     return [
-        # receive_mortgage_application,  # Temporarily commented out due to import issues
+        receive_mortgage_application,  # Now enabled - application storage functionality
         check_application_completeness,
         perform_initial_qualification,
         coordinate_workflow_routing,
         track_application_status,
-        generate_urla_1003_form
+        generate_urla_1003_form,
+        
+        # Shared application data tools for accessing stored applications
+        get_stored_application_data,
+        list_stored_applications,
+        find_application_by_name
     ]
 
 

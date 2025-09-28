@@ -1,24 +1,20 @@
 """
-Database Utilities Package
+Agent Database Runtime Utilities
 
-This package provides database connection management and knowledge graph utilities
-for the mortgage processing platform.
+Minimal database utilities for mortgage processing agents to connect to and 
+interact with the deployed mortgage database system.
 
 Components:
-- neo4j_connection: Neo4j database connection management
-- mcp_client: Model Context Protocol client for Neo4j integration  
-- mortgage_knowledge: Mortgage-specific knowledge graph operations
-- schema_manager: Knowledge graph schema management
+- neo4j_connection: Connect to deployed mortgage-db system  
+- application_storage: Store and retrieve agent-generated application data
 
-The database utilities are designed to be:
-- Reusable across all agents
-- Environment-configurable  
-- Production-ready with proper error handling
-- MCP-enabled for intelligent LLM integration
+Architecture:
+- Database setup/loading: Handled by separate mortgage-db repository
+- Agent runtime operations: Handled by this minimal utility package
+- Business rules/domain data: Queried from deployed mortgage-db system
 """
 
 from .neo4j_connection import Neo4jConnection, get_neo4j_connection, initialize_connection
-from .mortgage_data_loader import load_mortgage_data, verify_data_load
 from .application_storage import (
     MortgageApplicationData,
     store_application_data,
@@ -28,14 +24,15 @@ from .application_storage import (
 )
 
 __all__ = [
+    # Connection utilities
     "Neo4jConnection",
-    "get_neo4j_connection",
-    "initialize_connection", 
-    "load_mortgage_data",
-    "verify_data_load",
+    "get_neo4j_connection", 
+    "initialize_connection",
+    
+    # Agent storage operations
     "MortgageApplicationData",
     "store_application_data",
-    "get_application_data",
+    "get_application_data", 
     "list_applications",
     "update_application_status"
 ]

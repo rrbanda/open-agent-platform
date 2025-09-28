@@ -5,8 +5,8 @@ app:
 
 # LLM endpoint configuration with proper tool calling support
 llm:
-  base_url: "https://llama-4-scout-17b-16e-w4a16-maas-apicast-production.apps.prod.rhoai.rh-aiservices-bu.com:443/v1"
-  api_key: "67432c04730b9b163150e659d66c2b23"
+  base_url: "https://lss-lss.apps.prod.rhoai.rh-aiservices-bu.com/v1/openai/v1"
+  api_key: "not-needed"  # No authentication required for this RHOAI endpoint
   default_model: "llama-4-scout-17b-16e-w4a16"
 
 # LangGraph configuration (uses same model as LLM)
@@ -39,7 +39,7 @@ database:
 neo4j:
   uri: "bolt://localhost:7687"
   username: "neo4j"
-  password: "password"  # Your local Neo4j Desktop password
+  password: "mortgage123"  # Your local Neo4j Desktop password
   database: "mortgage"  # Dedicated mortgage knowledge graph database
   max_connection_lifetime: 3600
   max_connection_pool_size: 50

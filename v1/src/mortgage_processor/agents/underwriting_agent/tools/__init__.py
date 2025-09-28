@@ -32,6 +32,20 @@ from .calculate_debt_to_income import calculate_debt_to_income, validate_tool as
 from .evaluate_income_sources import evaluate_income_sources, validate_tool as validate_evaluate_income_sources
 from .make_underwriting_decision import make_underwriting_decision
 
+# Import shared application data tools for accessing stored applications
+try:
+    from mortgage_processor.agents.shared.application_data_tools import (
+        get_stored_application_data,
+        list_stored_applications,
+        find_application_by_name
+    )
+except ImportError:
+    from ..shared.application_data_tools import (
+        get_stored_application_data,
+        list_stored_applications,
+        find_application_by_name
+    )
+
 
 def get_all_underwriting_agent_tools() -> List[BaseTool]:
     """
@@ -47,7 +61,12 @@ def get_all_underwriting_agent_tools() -> List[BaseTool]:
         analyze_credit_risk,
         calculate_debt_to_income,
         evaluate_income_sources,
-        make_underwriting_decision
+        make_underwriting_decision,
+        
+        # Shared application data tools for accessing stored applications
+        get_stored_application_data,
+        list_stored_applications,
+        find_application_by_name
     ]
 
 

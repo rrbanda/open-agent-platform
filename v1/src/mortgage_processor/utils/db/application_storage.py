@@ -109,7 +109,8 @@ def store_application_data(app_data: MortgageApplicationData) -> Tuple[bool, str
         
         # Create the application node in Neo4j
         query = """
-        CREATE (app:MortgageApplication {
+        CREATE (app:Application {
+            id: $application_id,
             application_id: $application_id,
             received_date: $received_date,
             current_status: $current_status,
@@ -184,21 +185,21 @@ def _create_application_relationships(connection, app_data: MortgageApplicationD
         
         if app_data.first_time_buyer:
             profile_queries.append("""
-            MATCH (app:MortgageApplication {application_id: $application_id})
+            MATCH (app:Application {application_id: $application_id})
             MATCH (bp:BorrowerProfile {profile_name: "FirstTimeBuyer"})
             CREATE (app)-[:MATCHES_PROFILE]->(bp)
             """)
         
         if app_data.military_service:
             profile_queries.append("""
-            MATCH (app:MortgageApplication {application_id: $application_id})
+            MATCH (app:Application {application_id: $application_id})
             MATCH (bp:BorrowerProfile {profile_name: "Military"})
             CREATE (app)-[:MATCHES_PROFILE]->(bp)
             """)
         
         if app_data.rural_property:
             profile_queries.append("""
-            MATCH (app:MortgageApplication {application_id: $application_id})
+            MATCH (app:Application {application_id: $application_id})
             MATCH (bp:BorrowerProfile {profile_name: "RuralBuyer"})
             CREATE (app)-[:MATCHES_PROFILE]->(bp)
             """)
@@ -207,7 +208,7 @@ def _create_application_relationships(connection, app_data: MortgageApplicationD
         if (app_data.credit_score and app_data.credit_score >= 740 and 
             app_data.monthly_gross_income >= 10000):
             profile_queries.append("""
-            MATCH (app:MortgageApplication {application_id: $application_id})
+            MATCH (app:Application {application_id: $application_id})
             MATCH (bp:BorrowerProfile {profile_name: "HighIncomeStrong Credit"})
             CREATE (app)-[:MATCHES_PROFILE]->(bp)
             """)
@@ -222,7 +223,7 @@ def _create_application_relationships(connection, app_data: MortgageApplicationD
         # FHA eligibility
         if (not app_data.credit_score or app_data.credit_score >= 580):
             program_queries.append("""
-            MATCH (app:MortgageApplication {application_id: $application_id})
+            MATCH (app:Application {application_id: $application_id})
             MATCH (lp:LoanProgram {name: "FHA"})
             CREATE (app)-[:ELIGIBLE_FOR]->(lp)
             """)
@@ -230,7 +231,7 @@ def _create_application_relationships(connection, app_data: MortgageApplicationD
         # VA eligibility
         if app_data.military_service:
             program_queries.append("""
-            MATCH (app:MortgageApplication {application_id: $application_id})
+            MATCH (app:Application {application_id: $application_id})
             MATCH (lp:LoanProgram {name: "VA"})
             CREATE (app)-[:ELIGIBLE_FOR]->(lp)
             """)
@@ -238,7 +239,7 @@ def _create_application_relationships(connection, app_data: MortgageApplicationD
         # USDA eligibility
         if app_data.rural_property and (not app_data.credit_score or app_data.credit_score >= 640):
             program_queries.append("""
-            MATCH (app:MortgageApplication {application_id: $application_id})
+            MATCH (app:Application {application_id: $application_id})
             MATCH (lp:LoanProgram {name: "USDA"})
             CREATE (app)-[:ELIGIBLE_FOR]->(lp)
             """)
@@ -246,7 +247,7 @@ def _create_application_relationships(connection, app_data: MortgageApplicationD
         # Conventional eligibility
         if (not app_data.credit_score or app_data.credit_score >= 620):
             program_queries.append("""
-            MATCH (app:MortgageApplication {application_id: $application_id})
+            MATCH (app:Application {application_id: $application_id})
             MATCH (lp:LoanProgram {name: "Conventional"})
             CREATE (app)-[:ELIGIBLE_FOR]->(lp)
             """)
@@ -275,16 +276,17 @@ def get_application_data(application_id: str) -> Optional[Dict[str, Any]]:
         connection = get_neo4j_connection()
         
         query = """
-        MATCH (app:MortgageApplication {application_id: $application_id})
+        MATCH (app:Application {id: $application_id})
         RETURN app
         """
         
-        result = connection.execute_query(query, {"application_id": application_id})
-        record = result.single()
-        
-        if record:
-            return dict(record["app"])
-        return None
+        with connection.driver.session(database=connection.database) as session:
+            result = session.run(query, {"application_id": application_id})
+            record = result.single()
+            
+            if record:
+                return dict(record["app"])
+            return None
         
     except Exception as e:
         logger.error(f"Error retrieving application {application_id}: {e}")
@@ -304,22 +306,23 @@ def list_applications(status: Optional[str] = None) -> List[Dict[str, Any]]:
     try:
         connection = get_neo4j_connection()
         
-        if status:
-            query = """
-            MATCH (app:MortgageApplication {current_status: $status})
-            RETURN app
-            ORDER BY app.received_date DESC
-            """
-            result = connection.execute_query(query, {"status": status})
-        else:
-            query = """
-            MATCH (app:MortgageApplication)
-            RETURN app
-            ORDER BY app.received_date DESC
-            """
-            result = connection.execute_query(query)
-        
-        return [dict(record["app"]) for record in result]
+        with connection.driver.session(database=connection.database) as session:
+            if status:
+                query = """
+                MATCH (app:Application {status: $status})
+                RETURN app
+                ORDER BY app.created_at DESC
+                """
+                result = session.run(query, {"status": status})
+            else:
+                query = """
+                MATCH (app:Application)
+                RETURN app
+                ORDER BY app.created_at DESC
+                """
+                result = session.run(query)
+            
+            return [dict(record["app"]) for record in result]
         
     except Exception as e:
         logger.error(f"Error listing applications: {e}")
@@ -342,7 +345,7 @@ def update_application_status(application_id: str, new_status: str, notes: Optio
         connection = get_neo4j_connection()
         
         query = """
-        MATCH (app:MortgageApplication {application_id: $application_id})
+        MATCH (app:Application {application_id: $application_id})
         SET app.current_status = $new_status,
             app.updated_timestamp = datetime()
         """
