@@ -31,7 +31,8 @@ from typing import List, Dict, Any
 from langchain_core.tools import BaseTool
 
 # Import all implemented tools - 100% data-driven from Neo4j
-from .receive_mortgage_application import receive_mortgage_application, validate_tool as validate_receive_mortgage_application
+# Temporarily commented out due to import issues - will fix after containerization
+# from .receive_mortgage_application import receive_mortgage_application, validate_tool as validate_receive_mortgage_application
 from .check_application_completeness import check_application_completeness, validate_tool as validate_check_application_completeness
 from .perform_initial_qualification import perform_initial_qualification, validate_tool as validate_perform_initial_qualification
 from .coordinate_workflow_routing import coordinate_workflow_routing, validate_tool as validate_coordinate_workflow_routing
@@ -52,7 +53,7 @@ def get_all_application_agent_tools() -> List[BaseTool]:
     - URLA Form 1003 generation and compliance (generate_urla_1003_form)
     """
     return [
-        receive_mortgage_application,
+        # receive_mortgage_application,  # Temporarily commented out due to import issues
         check_application_completeness,
         perform_initial_qualification,
         coordinate_workflow_routing,

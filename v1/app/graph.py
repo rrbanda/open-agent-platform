@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 LangGraph App Graph for Mortgage Processing System V1
-Provides the compiled supervisor agent for LangGraph dev command
+Provides the compiled routing workflow for LangGraph dev command
 
-This creates a production-ready supervisor that coordinates all 5 mortgage processing
-agents using LangGraph's official supervisor implementation.
+This creates a production-ready routing workflow that intelligently routes
+users to the appropriate specialist agent based on LLM classification.
 """
 import sys
 import os
@@ -12,8 +12,8 @@ import os
 # Add the src directory to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from mortgage_processor.agents import create_supervisor_agent
+from mortgage_processor.agents.mortgage_workflow import create_mortgage_workflow
 
-# Create the supervisor agent (already compiled by create_supervisor_agent)
+# Create the routing workflow (compiled LangGraph with intelligent routing)
 # LangGraph dev handles persistence automatically
-app = create_supervisor_agent()
+app = create_mortgage_workflow()

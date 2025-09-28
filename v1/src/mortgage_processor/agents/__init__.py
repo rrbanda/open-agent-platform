@@ -1,7 +1,7 @@
 """
 Production Agents Package - V1
 
-Contains 6 production-ready components for complete mortgage processing:
+Contains 5 production-ready specialized agents for complete mortgage processing:
 
 **Specialized Agents (5):**
 - ApplicationAgent: Application intake & URLA generation
@@ -10,11 +10,11 @@ Contains 6 production-ready components for complete mortgage processing:
 - AppraisalAgent: Property valuation & market analysis
 - UnderwritingAgent: Credit analysis & lending decisions
 
-**Coordination Layer (1):**
-- SupervisorAgent: End-to-end workflow orchestration using LangGraph supervisor pattern
+**Coordination Layer:**
+- Router Workflow: End-to-end workflow orchestration using LangGraph router pattern with intelligent LLM-based routing
 
 All specialized agents use LangGraph ReAct architecture with Neo4j-powered tools.
-The supervisor coordinates all agents for seamless user experience.
+The router workflow intelligently routes requests to the appropriate specialist agent.
 """
 
 from .application_agent import create_application_agent
@@ -22,7 +22,7 @@ from .mortgage_advisor_agent import create_mortgage_advisor_agent
 from .document_agent import create_document_agent
 from .appraisal_agent import create_appraisal_agent
 from .underwriting_agent import create_underwriting_agent
-from .supervisor_agent import create_supervisor_agent
+from .mortgage_workflow import create_mortgage_workflow
 
 # Import validation functions where available
 try:
@@ -50,12 +50,7 @@ try:
 except ImportError:
     validate_underwriting_tools = None
 
-try:
-    from .supervisor_agent import validate_supervisor_agent
-except ImportError:
-    validate_supervisor_agent = None
-
-# Build __all__ list with 5 specialized agents + 1 supervisor
+# Build __all__ list with 5 specialized agents + router workflow
 __all__ = [
     # Production-ready agent creators (5 specialized agents)
     "create_application_agent",
@@ -64,8 +59,8 @@ __all__ = [
     "create_appraisal_agent",
     "create_underwriting_agent",
     
-    # Coordination layer (1 supervisor)
-    "create_supervisor_agent"
+    # Coordination layer (router workflow)
+    "create_mortgage_workflow"
 ]
 
 # Add validation functions that are available
@@ -79,5 +74,3 @@ if validate_appraisal_tools is not None:
     __all__.append("validate_appraisal_tools")
 if validate_underwriting_tools is not None:
     __all__.append("validate_underwriting_tools")
-if validate_supervisor_agent is not None:
-    __all__.append("validate_supervisor_agent")

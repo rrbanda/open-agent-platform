@@ -19,11 +19,23 @@ The database utilities are designed to be:
 
 from .neo4j_connection import Neo4jConnection, get_neo4j_connection, initialize_connection
 from .mortgage_data_loader import load_mortgage_data, verify_data_load
+from .application_storage import (
+    MortgageApplicationData,
+    store_application_data,
+    get_application_data,
+    list_applications,
+    update_application_status
+)
 
 __all__ = [
     "Neo4jConnection",
     "get_neo4j_connection",
     "initialize_connection", 
     "load_mortgage_data",
-    "verify_data_load"
+    "verify_data_load",
+    "MortgageApplicationData",
+    "store_application_data",
+    "get_application_data",
+    "list_applications",
+    "update_application_status"
 ]

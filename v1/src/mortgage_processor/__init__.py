@@ -2,19 +2,19 @@
 Mortgage Processor V1 - Production Agentic System
 
 This package provides a complete end-to-end agentic mortgage processing system
-with 5 specialized agents, 1 supervisor, and 200+ Neo4j-powered business rules.
+with 5 specialized agents, intelligent router workflow, and 200+ Neo4j-powered business rules.
 
 ## Quick Start - End-to-End Processing
 
 ```python
-from mortgage_processor.agents import create_supervisor_agent
+from mortgage_processor.agents import create_mortgage_workflow
 
-# Create supervisor for complete workflow coordination
-supervisor = create_supervisor_agent()
-response = supervisor.invoke({
+# Create router workflow for intelligent agent routing
+workflow = create_mortgage_workflow()
+response = workflow.invoke({
     "messages": [("user", "I want to apply for a mortgage")]
 })
-# Supervisor automatically coordinates all agents for seamless experience
+# Router automatically routes to the appropriate specialist agent
 ```
 
 ## Quick Start - Individual Agents
@@ -43,7 +43,7 @@ response = agent.invoke({"messages": [("user", "I want to apply for a mortgage")
 ## Agents
 
 **Coordination Layer:**
-- **SupervisorAgent**: End-to-end workflow orchestration and intelligent routing
+- **Router Workflow**: End-to-end workflow orchestration with intelligent LLM-based routing
 
 **Specialized Agents:**
 1. **ApplicationAgent**: Mortgage application intake & URLA generation
@@ -77,20 +77,20 @@ from .agents import (
     create_document_agent,
     create_appraisal_agent,
     create_underwriting_agent,
-    create_supervisor_agent
+    create_mortgage_workflow
 )
 
 from .utils.db import initialize_connection
 from .config import AppConfig
 
 __all__ = [
-    # Agent creators (5 specialized agents + 1 supervisor)
+    # Agent creators (5 specialized agents + router workflow)
     "create_application_agent",
     "create_mortgage_advisor_agent",
     "create_document_agent", 
     "create_appraisal_agent",
     "create_underwriting_agent",
-    "create_supervisor_agent",
+    "create_mortgage_workflow",
     
     # Core utilities
     "initialize_connection",
