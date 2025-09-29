@@ -1,0 +1,10 @@
+{
+  "dependencies": [
+    "../requirements.txt"
+  ],
+  "graphs": {
+    "mortgage_processing": "./graph.py:app"
+  },
+  "env": ".env",
+  "python_version": "3.11"
+}

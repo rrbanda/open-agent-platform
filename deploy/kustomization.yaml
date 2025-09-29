@@ -1,0 +1,86 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Metadata
+metadata:
+  name: mortgage-agents-deployment
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+# Namespace for all resources
+namespace: mortgage-agents
+
+# Common labels applied to all resources
+commonLabels:
+  app: mortgage-agents
+  environment: production
+  managed-by: kustomize
+  version: v1.0.0
+
+# Common annotations
+commonAnnotations:
+  deployment.kubernetes.io/revision: "1"
+  description: "Mortgage Agents AI System - Production Deployment"
+
+# Resources to deploy
+resources:
+- rbac.yaml
+- configmap.yaml
+- secret.yaml
+- storage.yaml
+- deployment.yaml
+
+# Resource transformers
+transformers: []
+
+# Patches for environment-specific customizations
+patches:
+# Production-specific resource limits
+- patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/memory
+      value: "4Gi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/cpu
+      value: "2000m"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/memory
+      value: "1Gi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/cpu
+      value: "500m"
+  target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: mortgage-agents
+
+# Images to use
+images:
+- name: mortgage-agents
+  newName: quay.io/rbrhssa/mortgage-agents
+  newTag: v1.0.0
+
+# Name prefix for resources (optional)
+namePrefix: ""
+
+# Name suffix for resources (optional)
+nameSuffix: ""
+
+# Variables that can be substituted in resources
+vars: []
+
+# Resource generation options
+generatorOptions:
+  disableNameSuffixHash: true
+
+# Replica configuration
+replicas:
+- name: mortgage-agents
+  count: 2
+
+# Config map generators (for additional configs if needed)
+configMapGenerator: []
+
+# Secret generators (for additional secrets if needed)
+secretGenerator: []

@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mortgage-agents-config
+  labels:
+    app: mortgage-agents
+    component: config
+data:
+  config.yaml: |
+    # Production configuration for Mortgage Agents System
+    app:
+      session_name: "mortgage_processing_session"
+      debug: false
+
+    # LLM endpoint configuration - values from environment variables
+    llm:
+      base_url: "${LLM_BASE_URL}"
+      api_key: "${LLM_API_KEY}"
+      default_model: "${LLM_DEFAULT_MODEL}"
+
+    # LangGraph configuration
+    langgraph:
+      model: "${LLM_DEFAULT_MODEL}"
+      temperature: 0.7
+      max_tokens: 2000
+      workflow_timeout_minutes: 30
+
+    # Vector database configuration
+    vector_db:
+      default_db_id: "mortgage_docs"
+      provider: "llamastack"
+      embedding: "all-MiniLM-L6-v2"
+      embedding_dimension: 384
+      default_chunk_size: 512
+
+    # Database configuration - using persistent volume paths
+    database:
+      type: "sqlite"
+      path: "/opt/app-root/src/mortgage-agents/data/chat_sessions.db"
+      host: "${DB_HOST:-localhost}"
+      port: "${DB_PORT:-5432}"
+      database: "${DB_NAME:-mortgage_db}"
+      username: "${DB_USERNAME:-postgres}"
+      password: "${DB_PASSWORD:-password}"
+
+    # Neo4j configuration - values from environment variables
+    neo4j:
+      uri: "${NEO4J_URI}"
+      username: "${NEO4J_USERNAME}" 
+      password: "${NEO4J_PASSWORD}"
+      database: "${NEO4J_DATABASE:-mortgage}"
+      max_connection_lifetime: 3600
+      max_connection_pool_size: 50
+      connection_acquisition_timeout: 60
+      enable_mcp: true
+
+    # Agent instructions for different processing types
+    agent_instructions:
+      chat_conversation: |
+        You are a helpful mortgage advisor assistant. You provide guidance, answer questions, and help users understand the mortgage process.
+
+        CHAT MODE GUIDELINES:
+        - Answer questions conversationally without making tool calls
+        - Provide helpful information about mortgages, rates, requirements, etc.
+        - Only suggest tools/actions when the user explicitly wants to upload documents or start processing
+        - Be friendly, informative, and guide users through their mortgage journey
+        - Ask clarifying questions to better help users
+        - Explain mortgage concepts in simple terms
+
+        WHEN TO USE TOOLS:
+        - ONLY when user explicitly uploads documents or asks to process documents
+        - ONLY when user provides specific data to analyze
+        - NEVER make up or assume data that wasn't provided
+        - If no documents are provided, respond conversationally
+
+      mortgage_processing: |
+        You are a specialized mortgage document processing agent. You MUST use the available tools to process every mortgage application.
+
+        CRITICAL: You MUST call tools systematically for each document. Never provide responses without calling tools first.
+
+        Follow the mandatory processing workflow systematically.
+
+      mortgage_application_conversation: |
+        You are a friendly mortgage application assistant. Your job is to collect all necessary information for a complete mortgage application through natural conversation.
+
+        Be conversational, warm, and helpful. Ask ONE question at a time.
+
+    # Mortgage business configuration
+    mortgage:
+      max_document_size_mb: 10
+      allowed_document_types: [".pdf", ".jpg", ".jpeg", ".png"]
+      validation_timeout_seconds: 30
+
+    # Response formatting
+    response_format:
+      include_confidence_scores: true
+      include_processing_steps: true
+      include_agent_reasoning: true
+      max_reasoning_length: 1000
+      timestamp_format: "ISO"

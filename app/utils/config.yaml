@@ -1,0 +1,479 @@
+# Application configuration
+app:
+  session_name: "mortgage_processing_session"
+  debug: true
+
+# LLM endpoint configuration with proper tool calling support
+llm:
+  base_url: "https://lss-lss.apps.prod.rhoai.rh-aiservices-bu.com/v1/openai/v1"
+  api_key: "not-needed"  # No authentication required for this RHOAI endpoint
+  default_model: "llama-4-scout-17b-16e-w4a16"
+
+# LangGraph configuration (uses same model as LLM)
+langgraph:
+  model: "llama-4-scout-17b-16e-w4a16"
+  temperature: 0.7
+  max_tokens: 2000
+  workflow_timeout_minutes: 30
+
+# Vector database configuration (LlamaStack remote only)
+vector_db:
+  default_db_id: "mortgage_docs"
+  provider: "llamastack"
+  embedding: "all-MiniLM-L6-v2"
+  embedding_dimension: 384
+  default_chunk_size: 512
+
+# Database configuration (SQLite)
+database:
+  type: "sqlite"
+  path: "data/chat_sessions.db"
+  # Legacy PostgreSQL config (kept for reference)
+  host: "localhost"
+  port: 5432
+  database: "mortgage_db"
+  username: "postgres"
+  password: "password"
+
+# Neo4j configuration for knowledge graph and MCP integration
+neo4j:
+  uri: "bolt://host.containers.internal:7687"  # For container access to host Neo4j
+  username: "neo4j"
+  password: "mortgage123"  # Your local Neo4j Desktop password
+  database: "mortgage"  # Dedicated mortgage knowledge graph database
+  max_connection_lifetime: 3600
+  max_connection_pool_size: 50
+  connection_acquisition_timeout: 60
+  enable_mcp: true
+
+# Agent instructions for different processing types
+agent_instructions:
+  # Instructions for CHAT conversations (general Q&A)
+  chat_conversation: |
+    You are a helpful mortgage advisor assistant. You provide guidance, answer questions, and help users understand the mortgage process.
+
+    CHAT MODE GUIDELINES:
+    - Answer questions conversationally without making tool calls
+    - Provide helpful information about mortgages, rates, requirements, etc.
+    - Only suggest tools/actions when the user explicitly wants to upload documents or start processing
+    - Be friendly, informative, and guide users through their mortgage journey
+    - Ask clarifying questions to better help users
+    - Explain mortgage concepts in simple terms
+
+    WHEN TO USE TOOLS:
+    - ONLY when user explicitly uploads documents or asks to process documents
+    - ONLY when user provides specific data to analyze
+    - NEVER make up or assume data that wasn't provided
+    - If no documents are provided, respond conversationally
+
+    EXAMPLES:
+    - User: "What is a mortgage?" → Provide helpful explanation (NO TOOLS)
+    - User: "How much can I afford?" → Ask about income/expenses, provide guidance (NO TOOLS)
+    - User: "Here are my documents" → Then use document processing tools
+
+  # Instructions for DOCUMENT processing (when documents are uploaded)
+  mortgage_processing: |
+    You are a specialized mortgage document processing agent. You MUST use the available tools to process every mortgage application.
+
+    CRITICAL: You MUST call tools systematically for each document. Never provide responses without calling tools first.
+
+    MANDATORY PROCESSING WORKFLOW - Follow this exactly:
+
+    STEP 1: For each document, CALL classify_document_type(document_content, file_name)
+    - Use the actual document content and filename provided
+    - This identifies what type of document you're processing
+
+    STEP 2: For each document, CALL validate_document_expiration(document_content, document_type)
+    - Use the document content and the type from Step 1
+    - This extracts expiration dates for your validation
+
+    STEP 3: For each document, CALL check_document_quality(document_metadata)
+    - Use file size and type information from the document
+    - This provides quality metrics for your evaluation
+
+    STEP 4: For each document, CALL extract_personal_information(document_content, document_type)
+    - Extract names, addresses, and personal details
+
+    STEP 5: For each document, CALL extract_income_information(document_content, document_type) 
+    - Extract financial and employment information
+
+    STEP 6: CALL get_current_date_time()
+    - Get current date to calculate expiration timeframes
+
+    STEP 7: CALL cross_validate_documents(all_extracted_data)
+    - Compare information across all documents for consistency
+
+    STEP 8: Apply business rules and make validation decisions:
+    - Driver's license: max_days_until_expiry = 30 days
+    - Bank statements: max_age_months = 24 months
+    - Tax statements: max_age_years = 2 years
+    - Pay stubs: max_age_months = 12 months
+    - Document quality: file_size >= 50KB for images, OCR confidence >= 0.70
+
+    STEP 9: CALL generate_urla_1003_form(application_data, extracted_documents)
+    - Generate the loan application form
+
+    CRITICAL INSTRUCTIONS FOR TOOL USAGE:
+    - Do NOT describe tools or mention them in text
+    - Do NOT write tool names in brackets like [tool_name()]
+    - You must ACTUALLY EXECUTE the tools using the tool calling mechanism
+    - Each tool call will provide you with real data to analyze
+    - After receiving tool results, analyze the data and make validation decisions
+    
+    WORKFLOW EXAMPLE:
+    1. Receive document → EXECUTE classify_document_type tool → Get classification result
+    2. Use classification result → EXECUTE validate_document_expiration tool → Get date info
+    3. Analyze date info against business rules → Make expiration decision
+    4. Continue with other tools and provide final analysis
+    
+    Remember: EXECUTE tools, don't describe them. Let the tools provide real data, then analyze that data.
+
+  # Instructions for MORTGAGE APPLICATION conversations (LangGraph workflow)
+  mortgage_application_conversation: |
+    You are a friendly mortgage application assistant. Your job is to collect all necessary information for a complete mortgage application through natural conversation.
+
+    CONVERSATION GUIDELINES:
+    - Be conversational, warm, and helpful
+    - Ask ONE question at a time
+    - Validate answers and ask follow-ups if needed
+    - Extract structured data from natural language responses
+    - Guide users step-by-step through the application process
+    - Never overwhelm users with multiple questions at once
+
+    INFORMATION TO COLLECT:
+    1. Personal Information: Full name, SSN, date of birth, phone, email
+    2. Current Address: Complete current address with ZIP code
+    3. Employment: Current employer, job title, years employed, employment type
+    4. Income: Gross annual income, additional income sources
+    5. Financial Details: Monthly debts, down payment amount, assets
+    6. Property Information: Property address, purchase price, property type
+    7. Loan Details: Loan amount needed, preferred loan type
+
+    CONVERSATION FLOW:
+    - Start with a warm greeting and explanation
+    - Ask simple questions first (name, basic info)
+    - Progress logically from personal → financial → property → loan details
+    - Validate important information by restating it
+    - Indicate progress throughout the conversation
+    - Signal when you have enough information to generate the application
+
+    EXAMPLES:
+    - "Hi! I'm here to help you apply for a mortgage. This will take about 10-15 minutes. Let's start with your full legal name."
+    - "Great! Now, what's your current gross annual income?"
+    - "Perfect! I have all the information I need. Let me prepare your application form..."
+
+    VALIDATION:
+    - Ensure required fields are complete
+    - Ask for clarification on unclear responses
+    - Confirm important financial details
+    - Check that all URLA 1003 required fields are collected
+
+# Prompt templates
+prompts:
+  validation_prompt_template: |
+    Process this mortgage application step by step:
+    
+    CUSTOMER INFORMATION:
+    - Name: {customer_name}
+    - Age: {customer_age}
+    - Loan Type: {loan_type}
+    - Credit Check Authorized: {credit_authorized}
+    - Application ID: {application_id}
+    
+    DOCUMENTS TO PROCESS ({document_count} total):
+    {document_list}
+    
+    REQUIRED DOCUMENTS FOR {loan_type}:
+    {required_documents}
+    
+    VALIDATION RULES:
+    {validation_rules}
+    
+    Execute the processing workflow systematically, calling appropriate tools for each step.
+    Provide detailed reasoning for each decision and comprehensive final recommendations.
+  
+  document_template: |
+    Document {index}:
+    - Filename: {file_name}
+    - Size: {file_size} bytes
+    - Type: {mime_type}
+    - Content Preview: {content_preview}
+
+# Agent definitions
+agents:
+  - name: "app"
+    model: "llama-4-scout-17b-16e-w4a16"
+    instructions: "{agent_instructions.chat_conversation}"
+    sampling_params:
+      strategy:
+        type: "greedy"
+      max_tokens: 3048
+    max_infer_iters: 10
+    tools:
+      - classify_document_type
+      - validate_document_expiration
+      - extract_personal_information
+      - extract_income_information
+      - check_document_quality
+      - authorize_credit_check
+      - generate_urla_1003_form
+      - cross_validate_documents
+    tool_config:
+      tool_choice: "auto"
+
+# Mortgage business configuration
+mortgage:
+  max_document_size_mb: 10
+  allowed_document_types: [".pdf", ".jpg", ".jpeg", ".png"]
+  validation_timeout_seconds: 30
+  
+  # Required documents by loan type
+  required_documents:
+    HomeLoan:
+      - document_type: "driver_license"
+        quantity: 1
+        description: "Valid government-issued photo ID"
+      - document_type: "bank_statement"
+        quantity: 2
+        description: "2 years of bank statements"
+      - document_type: "tax_statement"
+        quantity: 2
+        description: "2 years of tax returns"
+      - document_type: "pay_stub"
+        quantity: 1
+        description: "1 year of pay stubs"
+    WorkingCapital:
+      - document_type: "bank_statement"
+        quantity: 2
+        description: "2 years of business bank statements"
+      - document_type: "tax_statement"
+        quantity: 2
+        description: "2 years of business tax returns"
+      - document_type: "driver_license"
+        quantity: 1
+        description: "Valid government-issued photo ID"
+  
+  # Validation rules
+  validation_rules:
+    driver_license:
+      max_days_until_expiry: 30
+      acceptable_alternatives: ["passport"]
+    bank_statement:
+      max_age_months: 24
+      required_fields: ["account_balance", "monthly_deposits"]
+    tax_statement:
+      max_age_years: 2
+      required_fields: ["annual_gross_income", "filing_status"]
+    pay_stub:
+      max_age_months: 12
+      required_fields: ["gross_pay", "employer_name"]
+  
+  # Business logic configuration
+  business_logic:
+    completion_messages:
+      success: "Mortgage application processing completed successfully"
+      partial_success: "Mortgage application processing completed with some issues"
+      failure: "Mortgage application processing failed - manual review required"
+      missing_documents: "Additional documents required to complete processing"
+    
+    next_steps:
+      document_issues:
+        - "Review flagged documents with customer"
+        - "Request higher quality scans if needed"
+        - "Obtain missing or expired documents"
+      processing_complete:
+        - "Review all validated documents"
+        - "Generate URLA 1003 form"
+        - "Submit to underwriting team"
+        - "Schedule customer follow-up if needed"
+      manual_review:
+        - "Escalate to senior processor"
+        - "Contact customer for clarification"
+        - "Request additional documentation"
+    
+    # Status determination thresholds
+    status_thresholds:
+      success_condition: "successful_tools >= document_count"
+      partial_condition: "successful_tools > 0"
+      minimum_success_ratio: 1.0  # 100% for success
+      minimum_partial_ratio: 0.1  # 10% for partial
+    
+    # ID format templates
+    session_id_format: "mortgage-session-{}"
+    application_id_format: "APP_{}"
+
+# LangGraph Mortgage Application Workflow Configuration
+mortgage_application_workflow:
+  # Application data structure (URLA 1003 form fields)
+  required_fields:
+    personal_info:
+      - field: "full_name"
+        display: "Full Legal Name"
+        required: true
+        validation: "text_min_length_2"
+      - field: "ssn"
+        display: "Social Security Number"
+        required: true
+        validation: "ssn_format"
+      - field: "date_of_birth"
+        display: "Date of Birth"
+        required: true
+        validation: "date_format"
+      - field: "phone"
+        display: "Phone Number"
+        required: true
+        validation: "phone_format"
+      - field: "email"
+        display: "Email Address"
+        required: true
+        validation: "email_format"
+      
+    current_address:
+      - field: "street_address"
+        display: "Street Address"
+        required: true
+        validation: "text_min_length_5"
+      - field: "city"
+        display: "City"
+        required: true
+        validation: "text_min_length_2"
+      - field: "state"
+        display: "State"
+        required: true
+        validation: "state_code"
+      - field: "zip_code"
+        display: "ZIP Code"
+        required: true
+        validation: "zip_format"
+      - field: "years_at_address"
+        display: "Years at Current Address"
+        required: true
+        validation: "numeric_positive"
+        
+    employment:
+      - field: "employer_name"
+        display: "Current Employer"
+        required: true
+        validation: "text_min_length_2"
+      - field: "job_title"
+        display: "Job Title/Position"
+        required: true
+        validation: "text_min_length_2"
+      - field: "years_employed"
+        display: "Years with Current Employer"
+        required: true
+        validation: "numeric_positive"
+      - field: "employment_type"
+        display: "Employment Type"
+        required: true
+        validation: "employment_type_enum"
+        
+    financial:
+      - field: "gross_annual_income"
+        display: "Gross Annual Income"
+        required: true
+        validation: "numeric_positive"
+      - field: "additional_income"
+        display: "Additional Monthly Income"
+        required: false
+        validation: "numeric_positive_or_zero"
+      - field: "monthly_debts"
+        display: "Total Monthly Debt Payments"
+        required: true
+        validation: "numeric_positive_or_zero"
+      - field: "down_payment"
+        display: "Down Payment Amount"
+        required: true
+        validation: "numeric_positive"
+      - field: "assets_savings"
+        display: "Total Assets/Savings"
+        required: true
+        validation: "numeric_positive_or_zero"
+        
+    property:
+      - field: "property_address"
+        display: "Property Address"
+        required: true
+        validation: "text_min_length_5"
+      - field: "property_city"
+        display: "Property City"
+        required: true
+        validation: "text_min_length_2"
+      - field: "property_state"
+        display: "Property State"
+        required: true
+        validation: "state_code"
+      - field: "property_zip"
+        display: "Property ZIP Code"
+        required: true
+        validation: "zip_format"
+      - field: "purchase_price"
+        display: "Purchase Price"
+        required: true
+        validation: "numeric_positive"
+      - field: "property_type"
+        display: "Property Type"
+        required: true
+        validation: "property_type_enum"
+        
+    loan_details:
+      - field: "loan_amount"
+        display: "Loan Amount Requested"
+        required: true
+        validation: "numeric_positive"
+      - field: "loan_type"
+        display: "Preferred Loan Type"
+        required: true
+        validation: "loan_type_enum"
+      - field: "loan_purpose"
+        display: "Loan Purpose"
+        required: true
+        validation: "loan_purpose_enum"
+
+  # Workflow configuration
+  conversation_flow:
+    timeout_minutes: 30
+    max_retries_per_question: 3
+    completion_threshold: 0.95  # 95% of required fields must be collected
+    
+  # Validation rules
+  validation_patterns:
+    ssn_format: "^\\d{3}-\\d{2}-\\d{4}$|^\\d{9}$"
+    phone_format: "^\\+?1?[-\\s\\.]?\\(?\\d{3}\\)?[-\\s\\.]?\\d{3}[-\\s\\.]?\\d{4}$"
+    email_format: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+    zip_format: "^\\d{5}(-\\d{4})?$"
+    date_format: "^\\d{2}/\\d{2}/\\d{4}$|^\\d{4}-\\d{2}-\\d{2}$"
+    
+  # Enum values
+  enums:
+    employment_type:
+      - "Full-time W-2"
+      - "Part-time W-2"
+      - "Self-employed"
+      - "Contract/1099"
+      - "Retired"
+      - "Other"
+    property_type:
+      - "Single Family Home"
+      - "Condominium"
+      - "Townhouse"
+      - "Multi-family (2-4 units)"
+      - "Manufactured Home"
+    loan_type:
+      - "Conventional"
+      - "FHA"
+      - "VA"
+      - "USDA"
+      - "Jumbo"
+    loan_purpose:
+      - "Purchase"
+      - "Refinance"
+      - "Cash-out Refinance"
+
+# Response formatting
+response_format:
+  include_confidence_scores: true
+  include_processing_steps: true
+  include_agent_reasoning: true
+  max_reasoning_length: 1000
+  timestamp_format: "ISO"

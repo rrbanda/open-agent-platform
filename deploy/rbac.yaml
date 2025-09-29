@@ -1,0 +1,138 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mortgage-agents-sa
+  labels:
+    app: mortgage-agents
+    component: service-account
+automountServiceAccountToken: false
+
+---
+# ClusterRole for mortgage agents application
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mortgage-agents-cluster-role
+  labels:
+    app: mortgage-agents
+rules:
+# Minimal permissions for health checks and metrics
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+  resourceNames: []
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list"]
+  resourceNames: ["mortgage-agents-config"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+  resourceNames: ["mortgage-agents-secrets"]
+
+---
+# Role for namespace-specific operations
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mortgage-agents-role
+  labels:
+    app: mortgage-agents
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+  resourceNames: ["mortgage-agents-config"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+  resourceNames: ["mortgage-agents-secrets"]
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["get", "list"]
+  resourceNames: ["mortgage-agents-data-pvc"]
+
+---
+# ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: mortgage-agents-cluster-binding
+  labels:
+    app: mortgage-agents
+subjects:
+- kind: ServiceAccount
+  name: mortgage-agents-sa
+  namespace: mortgage-agents
+roleRef:
+  kind: ClusterRole
+  name: mortgage-agents-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# RoleBinding for namespace operations
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mortgage-agents-binding
+  labels:
+    app: mortgage-agents
+subjects:
+- kind: ServiceAccount
+  name: mortgage-agents-sa
+  namespace: mortgage-agents
+roleRef:
+  kind: Role
+  name: mortgage-agents-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Security Context Constraint for OpenShift
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: mortgage-agents-scc
+  labels:
+    app: mortgage-agents
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegedContainer: false
+allowedCapabilities: null
+defaultAddCapabilities: null
+requiredDropCapabilities:
+- ALL
+allowedFlexVolumes: []
+fsGroup:
+  type: MustRunAs
+  ranges:
+  - min: 0
+    max: 65534
+readOnlyRootFilesystem: false
+runAsUser:
+  type: MustRunAsRange
+  uidRangeMin: 1001
+  uidRangeMax: 1001
+seLinuxContext:
+  type: MustRunAs
+seccompProfiles:
+- runtime/default
+supplementalGroups:
+  type: MustRunAs
+  ranges:
+  - min: 0
+    max: 65534
+users:
+- system:serviceaccount:mortgage-agents:mortgage-agents-sa
+volumes:
+- configMap
+- downwardAPI
+- emptyDir
+- persistentVolumeClaim
+- projected
+- secret

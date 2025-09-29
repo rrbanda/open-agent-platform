@@ -1,0 +1,145 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mortgage-agents-data-pvc
+  labels:
+    app: mortgage-agents
+    component: storage
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  # Use default storage class (or specify if needed)
+  # storageClassName: fast-ssd
+  volumeMode: Filesystem
+
+---
+# Service for internal communication
+apiVersion: v1
+kind: Service
+metadata:
+  name: mortgage-agents-service
+  labels:
+    app: mortgage-agents
+    component: service
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 2024
+    targetPort: http
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  selector:
+    app: mortgage-agents
+    component: api-server
+
+---
+# Route for external access (OpenShift specific)
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mortgage-agents-route
+  labels:
+    app: mortgage-agents
+    component: route
+  annotations:
+    haproxy.router.openshift.io/timeout: 300s
+    haproxy.router.openshift.io/rate-limit-connections: "true"
+    haproxy.router.openshift.io/rate-limit-connections.concurrent-tcp: "100"
+    haproxy.router.openshift.io/rate-limit-connections.rate-http: "1000"
+    haproxy.router.openshift.io/rate-limit-connections.rate-tcp: "1000"
+spec:
+  # host: mortgage-agents.apps.your-cluster.com  # Will be auto-generated if not specified
+  to:
+    kind: Service
+    name: mortgage-agents-service
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
+
+---
+# Network Policy for security (optional - adjust based on requirements)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mortgage-agents-netpol
+  labels:
+    app: mortgage-agents
+spec:
+  podSelector:
+    matchLabels:
+      app: mortgage-agents
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow traffic from router/ingress
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: openshift-ingress
+    ports:
+    - protocol: TCP
+      port: 2024
+  # Allow traffic from monitoring namespace
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: openshift-monitoring
+    ports:
+    - protocol: TCP
+      port: 9090
+  # Allow traffic from same namespace (for service mesh if used)
+  - from:
+    - podSelector:
+        matchLabels:
+          app: mortgage-agents
+  egress:
+  # Allow DNS resolution
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: openshift-dns
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Allow access to Neo4j database
+  - to:
+    - podSelector:
+        matchLabels:
+          app: neo4j
+    ports:
+    - protocol: TCP
+      port: 7687
+    - protocol: TCP
+      port: 7474
+  # Allow access to PostgreSQL database
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgresql
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow HTTPS outbound for LLM API calls
+  - to: {}
+    ports:
+    - protocol: TCP
+      port: 443
+  # Allow HTTP outbound for health checks
+  - to: {}
+    ports:
+    - protocol: TCP
+      port: 80
