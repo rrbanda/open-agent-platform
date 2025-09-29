@@ -9,7 +9,7 @@ discoverable tools for application data operations.
 import logging
 from langchain_core.tools import tool
 
-# Import from the primary storage module (utils/db)
+# Import from the utils module (which properly exposes database functions)
 try:
     from utils import (
         get_application_data,
@@ -18,7 +18,7 @@ try:
     )
 except ImportError:
     # Fallback import path
-    from ...utils.db import (
+    from utils.database import (
         get_application_data,
         list_applications,
         initialize_connection
@@ -49,7 +49,9 @@ def get_stored_application_data(application_id: str) -> str:
         initialize_connection()
         
         # Get application data from storage
-        app_data = get_application_data(application_id.strip())
+        success, app_data = get_application_data(application_id.strip())
+        if not success:
+            return f"❌ Error retrieving application {application_id}: {app_data}"
         
         if not app_data:
             return f"❌ Application {application_id} not found in storage"
@@ -131,9 +133,13 @@ def list_stored_applications(status_filter: str = "") -> str:
         
         # Get applications from storage
         if status_filter and status_filter.strip():
-            applications = list_applications(status_filter.strip().upper())
+            success, applications = list_applications()
+            if not success:
+                return f"❌ Error retrieving applications: {applications}"
         else:
-            applications = list_applications()
+            success, applications = list_applications()
+            if not success:
+                return f"❌ Error retrieving applications: {applications}"
             
         if not applications:
             filter_msg = f" with status '{status_filter}'" if status_filter else ""
@@ -188,7 +194,9 @@ def find_application_by_name(applicant_name: str) -> str:
         name_query = applicant_name.strip()
         
         # Get all applications and search by name
-        all_apps = list_applications()
+        success, all_apps = list_applications()
+        if not success:
+            return f"❌ Error retrieving applications: {all_apps}"
         matching_apps = []
         
         for app in all_apps:

@@ -35,12 +35,12 @@ def parse_neo4j_rule(rule_dict: Dict[str, Any]) -> Dict[str, Any]:
 
 class ApplicationCompletenessRequest(BaseModel):
     """Application completeness check request parameters."""
-    application_id: str = Field(..., description="Application ID to check")
-    loan_purpose: str = Field(..., description="Loan purpose (purchase, refinance, etc.)")
-    employment_type: str = Field(..., description="Employment type (w2, self_employed, contract)")
+    application_id: str = Field(default="TEMP_CHECK", description="Application ID to check")
+    loan_purpose: str = Field(default="purchase", description="Loan purpose (purchase, refinance, etc.)")
+    employment_type: str = Field(default="w2", description="Employment type (w2, self_employed, contract)")
     has_co_borrower: bool = Field(default=False, description="Has co-borrower")
-    property_type: str = Field(..., description="Property type")
-    occupancy_type: str = Field(..., description="Occupancy type")
+    property_type: str = Field(default="single_family_detached", description="Property type")
+    occupancy_type: str = Field(default="primary_residence", description="Occupancy type")
     
     # Field status (True = provided, False = missing)
     personal_info_complete: bool = Field(default=True, description="Personal information complete")
@@ -62,9 +62,9 @@ class ApplicationCompletenessRequest(BaseModel):
 
 @tool(args_schema=ApplicationCompletenessRequest)
 def check_application_completeness(
-    application_id: str,
-    loan_purpose: str,
-    employment_type: str,
+    application_id: str = "TEMP_CHECK",
+    loan_purpose: str = "purchase", 
+    employment_type: str = "w2",
     has_co_borrower: bool = False,
     property_type: str = "single_family_detached",
     occupancy_type: str = "primary_residence",

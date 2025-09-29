@@ -37,7 +37,8 @@ database:
 
 # Neo4j configuration for knowledge graph and MCP integration
 neo4j:
-  uri: "bolt://host.containers.internal:7687"  # For container access to host Neo4j
+  uri: "bolt://localhost:7687"  # Default for local development
+  # Container override: use -e NEO4J_URI="bolt://host.containers.internal:7687" in container
   username: "neo4j"
   password: "mortgage123"  # Your local Neo4j Desktop password
   database: "mortgage"  # Dedicated mortgage knowledge graph database

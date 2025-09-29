@@ -5,10 +5,7 @@ This tool provides comprehensive property valuation analysis using multiple appr
 based on Neo4j property appraisal rules.
 """
 
-import json
 import logging
-from typing import Dict, List, Any, Optional
-from pydantic import BaseModel, Field
 from langchain_core.tools import tool
 
 try:
@@ -19,26 +16,20 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class PropertyValueAnalysisRequest(BaseModel):
-    """Property value analysis request parameters."""
-    property_address: str = Field(..., description="Full property address")
-    property_type: str = Field(..., description="Property type (single_family_detached, condominium, townhouse, etc.)")
-    loan_amount: float = Field(..., description="Requested loan amount")
-    property_value: Optional[float] = Field(None, description="Estimated property value if available")
-    gross_living_area: Optional[int] = Field(None, description="Gross living area in square feet")
-    year_built: Optional[int] = Field(None, description="Year property was built")
-    lot_size: Optional[float] = Field(None, description="Lot size in acres")
-    bedrooms: Optional[int] = Field(None, description="Number of bedrooms")
-    bathrooms: Optional[float] = Field(None, description="Number of bathrooms")
-    appraisal_purpose: str = Field(default="purchase", description="Appraisal purpose (purchase, refinance, etc.)")
 
 
 @tool
 def analyze_property_value(property_info: str) -> str:
-    """Analyze property value using multiple appraisal approaches based on Neo4j rules.
+    """
+    Analyze property value using multiple appraisal approaches based on Neo4j rules.
     
-    Args:
-        property_info: Property details like "Address: 456 Oak Ave Austin TX, Type: single_family, Loan: 390000, Value: 450000, SqFt: 2200, Built: 2015"
+    This tool provides comprehensive property valuation analysis using sales comparison,
+    cost, and income approaches based on industry standards and appraisal rules.
+    
+    Provide property information in natural language, such as:
+    "Property at 456 Oak Ave Austin TX, single family home, loan amount $390,000, estimated value $450,000, 2200 sq ft, built in 2015"
+    "Address 123 Main St Dallas TX, townhouse, loan $320,000, property value $380,000, 1800 sqft, year built 2018"
+    "Condo at 789 Pine Blvd, loan amount $275,000, value estimate $325,000, 1400 square feet, built 2020"
     """
     
     try:
@@ -70,11 +61,11 @@ def analyze_property_value(property_info: str) -> str:
         built_match = re.search(r'built:\s*(\d{4})', info)
         year_built = int(built_match.group(1)) if built_match else 2015
         
-        # Set defaults
-        lot_size = 0.25
-        bedrooms = 3
-        bathrooms = 2.5
-        appraisal_purpose = "purchase"
+        # Set defaults (for reference, not actively used)
+        # lot_size = 0.25
+        # bedrooms = 3  
+        # bathrooms = 2.5
+        # appraisal_purpose = "purchase"
         
         # Initialize Neo4j connection
         initialize_connection()
@@ -229,17 +220,9 @@ def analyze_property_value(property_info: str) -> str:
 def validate_tool() -> bool:
     """Validate that the analyze_property_value tool works correctly."""
     try:
-        # Test with sample data
+        # Test with sample natural language data
         result = analyze_property_value.invoke({
-            "property_address": "123 Main St, Anytown, CA 90210",
-            "property_type": "single_family_detached",
-            "loan_amount": 400000.0,
-            "property_value": 500000.0,
-            "gross_living_area": 2000,
-            "year_built": 2010,
-            "bedrooms": 3,
-            "bathrooms": 2.5,
-            "appraisal_purpose": "purchase"
+            "property_info": "Property at 123 Main St, Anytown, CA 90210, single family detached home, loan amount $400,000, estimated value $500,000, 2000 sq ft, built in 2010"
         })
         return "PROPERTY VALUE ANALYSIS REPORT" in result and "VALUE ANALYSIS APPROACHES" in result
     except Exception as e:

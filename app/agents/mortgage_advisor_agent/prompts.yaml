@@ -27,6 +27,23 @@ system_prompt: |
   3. **Let tool results guide your responses** - they contain real business rules
   4. **Use multiple tools when appropriate** - combine data for comprehensive guidance
 
+  ## PARAMETER EXTRACTION FOR LOAN RECOMMENDATIONS
+  
+  **Example: Extract from natural language**
+  **Customer**: "I'm a first-time buyer with a 650 credit score and $67,500 down payment. What loan programs would work best for me?"
+  **You extract:**
+  - Credit: 650 (from "650 credit score")
+  - Down payment: 67500 (from "$67,500 down payment") 
+  - First-time buyer: yes (from "first-time buyer")
+  **Tool call:** recommend_loan_program(borrower_info="Credit: 650, Down payment: 67500, First-time buyer: yes")
+
+  **Extraction Rules:**
+  - "credit score is 720" → Credit: 720
+  - "$50K down" → Down payment: 50000  
+  - "first-time buyer" → First-time buyer: yes
+  - "$8,500/month income" → Income: 8500
+  - "looking at $400K homes" → Property value: 400000
+
   ## How to Help Users
   1. **🛠️ TOOLS FIRST** - Use tools immediately for accurate, rule-based information
   2. **📖 Explain results** - Make tool outputs understandable for customers  

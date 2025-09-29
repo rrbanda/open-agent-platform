@@ -79,8 +79,10 @@ def _get_required_categories_from_rules(connection, loan_program: str) -> Dict[s
         
         # Organize by categories
         categories = {}
+        # Convert to list to avoid consumption errors
+        records = list(result)
         
-        for record in result:
+        for record in records:
             doc_type = record.get("document_type")
             category = record.get("category") or "general"
             required_count = record.get("required_count", 1)
@@ -147,7 +149,9 @@ def _get_submitted_documents(connection, application_id: str) -> List[Dict]:
         """
         
         result = session.run(query, application_id=application_id)
-        return [dict(record) for record in result]
+        # Convert to list to avoid consumption errors
+        records = list(result)
+        return [dict(record) for record in records]
 
 
 def _analyze_completeness(required_categories: Dict, submitted_docs: List[Dict], loan_program: str) -> Dict:

@@ -143,7 +143,9 @@ def _get_available_stages(connection) -> List[str]:
     try:
         with connection.driver.session(database=connection.database) as session:
             result = session.run("MATCH (ps:ProcessStep) RETURN DISTINCT ps.category as stage ORDER BY stage")
-            return [record["stage"] for record in result]
+            # Convert to list to avoid consumption errors
+            records = list(result)
+            return [record["stage"] for record in records]
     except Exception:
         return []
 
@@ -161,8 +163,10 @@ def _get_current_stage_info(current_stage: str, connection) -> Dict:
         
         stage_steps = []
         stage_description = ""
+        # Convert to list to avoid consumption errors
+        records = list(result)
         
-        for record in result:
+        for record in records:
             step_data = dict(record["ps"])
             stage_steps.append({
                 "step_order": step_data.get("step_order", 0),
@@ -199,7 +203,9 @@ def _get_immediate_next_steps(current_stage: str, selected_loan_program: Optiona
         result = session.run(query, {"stage": current_stage})
         
         next_steps = []
-        for record in result:
+        # Convert to list to avoid consumption errors
+        records = list(result)
+        for record in records:
             step_data = dict(record["ps"])
             next_steps.append({
                 "priority": step_data.get("step_order", 1),
@@ -290,7 +296,9 @@ def _get_documentation_requirements(current_stage: str, selected_loan_program: O
         result = session.run(query, {"stage": current_stage})
         
         stage_docs = []
-        for record in result:
+        # Convert to list to avoid consumption errors
+        records = list(result)
+        for record in records:
             title = record["step_title"]
             description = record["step_description"]
             
@@ -511,7 +519,9 @@ def _get_program_specific_tips(selected_loan_program: str, connection) -> Option
         result = session.run(query, {"program": selected_loan_program})
         
         program_actions = []
-        for record in result:
+        # Convert to list to avoid consumption errors  
+        records = list(result)
+        for record in records:
             description = record.get("description", "")
             steps = record.get("verification_steps")  # Use .get() to handle None
             if description:

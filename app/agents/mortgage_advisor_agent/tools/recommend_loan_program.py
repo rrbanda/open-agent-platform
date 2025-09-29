@@ -112,7 +112,9 @@ def recommend_loan_program(borrower_info: str) -> str:
             
             result = session.run(query)
             programs = []
-            for record in result:
+            # Convert result to list immediately to avoid consumption errors
+            records = list(result)
+            for record in records:
                 program_data = dict(record['lp'])
                 programs.append({
                     'program': program_data,
@@ -205,7 +207,8 @@ Analysis completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     except Exception as e:
         return f"Error analyzing loan recommendations: {str(e)}"
     finally:
-        connection.disconnect()
+        if 'connection' in locals() and connection:
+            connection.disconnect()
 
 
 def _determine_borrower_category(credit_score: int, down_payment: float, military_status: str, 

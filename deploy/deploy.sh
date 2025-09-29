@@ -7,9 +7,9 @@ set -euo pipefail
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
-IMAGE_NAME="mortgage-agents"
+IMAGE_NAME="mortgage-agents" 
 IMAGE_TAG="${IMAGE_TAG:-v1.0.0}"
-REGISTRY="${REGISTRY:-quay.io/rbrhssa}"
+REGISTRY="quay.io/rbrhssa"
 NAMESPACE="${NAMESPACE:-mortgage-agents}"
 ENVIRONMENT="${ENVIRONMENT:-production}"
 
@@ -417,9 +417,10 @@ main() {
             echo
             echo "Environment variables:"
             echo "  IMAGE_TAG    - Image tag to deploy (default: v1.0.0)"
-            echo "  REGISTRY     - Container registry (default: quay.io/your-org)"
             echo "  NAMESPACE    - OpenShift namespace (default: mortgage-agents)"
             echo "  ENVIRONMENT  - Environment name (default: production)"
+            echo ""
+            echo "Registry: quay.io/rbrhssa/mortgage-agents (hardcoded)"
             echo
             echo "Examples:"
             echo "  IMAGE_TAG=v1.2.0 NAMESPACE=mortgage-dev ./deploy.sh deploy"

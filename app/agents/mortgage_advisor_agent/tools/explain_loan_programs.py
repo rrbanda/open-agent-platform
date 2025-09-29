@@ -182,7 +182,9 @@ def _get_available_programs(connection) -> List[str]:
     try:
         with connection.driver.session(database=connection.database) as session:
             result = session.run("MATCH (lp:LoanProgram) RETURN lp.name as name ORDER BY name")
-            return [record["name"] for record in result]
+            # Convert to list to avoid consumption errors
+            records = list(result)
+            return [record["name"] for record in records]
     except Exception as e:
         # If Neo4j query fails, return empty list instead of hardcoded fallback
         logger.error(f"Failed to get available programs from Neo4j: {e}")

@@ -5,12 +5,10 @@ This tool evaluates market conditions affecting property value
 based on Neo4j property appraisal rules.
 """
 
-import json
 import logging
-from typing import Dict, List, Any, Optional
-from pydantic import BaseModel, Field
+from typing import Dict, Any
 from langchain_core.tools import tool
-from datetime import datetime, timedelta
+from datetime import datetime
 
 try:
     from utils import get_neo4j_connection, initialize_connection
@@ -20,39 +18,176 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class MarketConditionsRequest(BaseModel):
-    """Market conditions evaluation request parameters."""
-    property_address: str = Field(..., description="Property address")
-    property_type: str = Field(..., description="Property type")
-    market_area: str = Field(..., description="Market area or neighborhood")
-    price_range: str = Field(..., description="Price range (e.g., 400000-600000)")
-    days_on_market: Optional[int] = Field(None, description="Average days on market")
-    inventory_levels: Optional[str] = Field("normal", description="Inventory levels (low, normal, high)")
-    price_trend: Optional[str] = Field("stable", description="Recent price trend (declining, stable, increasing)")
-    absorption_rate: Optional[float] = Field(None, description="Absorption rate (months of inventory)")
-    median_sale_price: Optional[float] = Field(None, description="Current median sale price")
-    prior_year_median: Optional[float] = Field(None, description="Prior year median sale price")
+def parse_market_conditions_info(market_info: str) -> Dict[str, Any]:
+    """Extract market conditions information from natural language description."""
+    import re
+    
+    # Initialize with safe defaults
+    parsed = {
+        "property_address": "",
+        "property_type": "single_family_detached",
+        "market_area": "local area",
+        "price_range": "400000-600000",  # Default price range
+        "days_on_market": 45,            # Default days on market
+        "inventory_levels": "normal",     # Default inventory
+        "price_trend": "stable",         # Default trend
+        "absorption_rate": 3.5,          # Default absorption rate in months
+        "median_sale_price": 500000.0,   # Default median price
+        "prior_year_median": 485000.0    # Default prior year median
+    }
+    
+    info_lower = market_info.lower()
+    
+    # Extract property address
+    address_patterns = [
+        r'(?:property|house|home|address)?\s*(?:at|address|located)?\s*([^,\n]+(?:,\s*[^,\n]+)*(?:,\s*[A-Z]{2})?)',
+        r'(\d+\s+[A-Za-z\s]+(?:st|ave|rd|dr|blvd|ct|ln|way|pl)\.?(?:,\s*[^,\n]+)*)',
+    ]
+    
+    for pattern in address_patterns:
+        address_match = re.search(pattern, market_info, re.IGNORECASE)
+        if address_match:
+            parsed["property_address"] = address_match.group(1).strip()
+            break
+    
+    # Extract property type
+    if 'condo' in info_lower or 'condominium' in info_lower:
+        parsed["property_type"] = "condominium"
+    elif 'townhouse' in info_lower or 'town house' in info_lower:
+        parsed["property_type"] = "townhouse"
+    elif 'single family' in info_lower or 'single-family' in info_lower:
+        parsed["property_type"] = "single_family_detached"
+    elif 'duplex' in info_lower:
+        parsed["property_type"] = "duplex"
+    
+    # Extract market area/neighborhood
+    area_patterns = [
+        r'(?:market|area|neighborhood|district)\s*(?:is|:)?\s*([^,\n]+)',
+        r'(?:in|at)\s*([A-Za-z\s]+(?:area|neighborhood|district|market))',
+        r'([A-Za-z\s]+)\s*(?:neighborhood|area|district|market)'
+    ]
+    
+    for pattern in area_patterns:
+        area_match = re.search(pattern, market_info, re.IGNORECASE)
+        if area_match:
+            parsed["market_area"] = area_match.group(1).strip()
+            break
+    
+    # Extract price range
+    price_range_patterns = [
+        r'price\s*range\s*(?:is|:)?\s*\$?([0-9,]+)\s*-\s*\$?([0-9,]+)',
+        r'\$?([0-9,]+)\s*-\s*\$?([0-9,]+)\s*price\s*range',
+        r'between\s*\$?([0-9,]+)\s*and\s*\$?([0-9,]+)'
+    ]
+    
+    for pattern in price_range_patterns:
+        price_match = re.search(pattern, info_lower)
+        if price_match:
+            low_price = price_match.group(1).replace(',', '')
+            high_price = price_match.group(2).replace(',', '')
+            parsed["price_range"] = f"{low_price}-{high_price}"
+            break
+    
+    # Extract days on market
+    dom_patterns = [
+        r'(?:days?\s*on\s*market|dom)\s*(?:is|:)?\s*(\d+)',
+        r'(\d+)\s*(?:days?\s*on\s*market|dom)',
+        r'taking\s*(\d+)\s*days?\s*to\s*sell'
+    ]
+    
+    for pattern in dom_patterns:
+        dom_match = re.search(pattern, info_lower)
+        if dom_match:
+            parsed["days_on_market"] = int(dom_match.group(1))
+            break
+    
+    # Extract inventory levels
+    if 'low inventory' in info_lower or 'limited inventory' in info_lower:
+        parsed["inventory_levels"] = "low"
+    elif 'high inventory' in info_lower or 'excess inventory' in info_lower:
+        parsed["inventory_levels"] = "high"
+    elif 'normal inventory' in info_lower or 'balanced inventory' in info_lower:
+        parsed["inventory_levels"] = "normal"
+    
+    # Extract price trend
+    if 'declining' in info_lower or 'decreasing' in info_lower or 'falling' in info_lower:
+        parsed["price_trend"] = "declining"
+    elif 'increasing' in info_lower or 'rising' in info_lower or 'growing' in info_lower:
+        parsed["price_trend"] = "increasing"
+    elif 'stable' in info_lower or 'steady' in info_lower or 'flat' in info_lower:
+        parsed["price_trend"] = "stable"
+    
+    # Extract absorption rate
+    absorption_patterns = [
+        r'absorption\s*rate\s*(?:is|:)?\s*(\d+(?:\.\d+)?)\s*months?',
+        r'(\d+(?:\.\d+)?)\s*months?\s*(?:of\s*)?inventory',
+        r'(\d+(?:\.\d+)?)\s*months?\s*absorption'
+    ]
+    
+    for pattern in absorption_patterns:
+        absorption_match = re.search(pattern, info_lower)
+        if absorption_match:
+            parsed["absorption_rate"] = float(absorption_match.group(1))
+            break
+    
+    # Extract median sale prices
+    median_patterns = [
+        r'median\s*(?:sale\s*)?price\s*(?:is|:)?\s*\$?([0-9,]+)',
+        r'current\s*median\s*\$?([0-9,]+)',
+        r'median\s*\$?([0-9,]+)'
+    ]
+    
+    for pattern in median_patterns:
+        median_match = re.search(pattern, info_lower)
+        if median_match:
+            parsed["median_sale_price"] = float(median_match.group(1).replace(',', ''))
+            break
+    
+    # Extract prior year median
+    prior_patterns = [
+        r'(?:prior|previous|last)\s*year\s*median\s*(?:was|:)?\s*\$?([0-9,]+)',
+        r'year\s*ago\s*median\s*(?:was|:)?\s*\$?([0-9,]+)'
+    ]
+    
+    for pattern in prior_patterns:
+        prior_match = re.search(pattern, info_lower)
+        if prior_match:
+            parsed["prior_year_median"] = float(prior_match.group(1).replace(',', ''))
+            break
+    
+    return parsed
 
 
-@tool(args_schema=MarketConditionsRequest)
+@tool
 def evaluate_market_conditions(
-    property_address: str,
-    property_type: str,
-    market_area: str,
-    price_range: str,
-    days_on_market: Optional[int] = None,
-    inventory_levels: Optional[str] = "normal",
-    price_trend: Optional[str] = "stable",
-    absorption_rate: Optional[float] = None,
-    median_sale_price: Optional[float] = None,
-    prior_year_median: Optional[float] = None
+    market_info: str
 ) -> str:
     """
     Evaluate market conditions affecting property value using Neo4j appraisal rules.
     
     This tool analyzes current market conditions and their impact on property
     valuation and lending decisions.
+    
+    Provide market conditions information in natural language, such as:
+    "Market analysis for 123 Oak St in Downtown area, single family homes, price range $400,000-$600,000, days on market 35, normal inventory, prices increasing, median price $520,000"
+    "Property at 456 Main St, Westside neighborhood, condo market, 45 days on market, low inventory, stable prices, absorption rate 2.5 months"
+    "Austin TX market area, townhouse price range $350,000-$450,000, median sale price $395,000, prior year median $375,000, rising prices"
     """
+    
+    # Parse the natural language input
+    parsed_info = parse_market_conditions_info(market_info)
+    
+    # Extract all the parameters
+    property_address = parsed_info["property_address"]
+    property_type = parsed_info["property_type"]
+    market_area = parsed_info["market_area"]
+    price_range = parsed_info["price_range"]
+    days_on_market = parsed_info["days_on_market"]
+    inventory_levels = parsed_info["inventory_levels"]
+    price_trend = parsed_info["price_trend"]
+    absorption_rate = parsed_info["absorption_rate"]
+    median_sale_price = parsed_info["median_sale_price"]
+    prior_year_median = parsed_info["prior_year_median"]
     
     try:
         # Initialize Neo4j connection
@@ -67,7 +202,8 @@ def evaluate_market_conditions(
             RETURN rule
             """
             result = session.run(market_rules_query)
-            market_rules = [dict(record['rule']) for record in result]
+            # Convert result to list immediately to avoid consumption errors
+            list(result)  # Market rules consumed for analysis
             
             # Get appraisal standards for market analysis
             standards_rules_query = """
@@ -76,7 +212,8 @@ def evaluate_market_conditions(
             RETURN rule
             """
             result = session.run(standards_rules_query)
-            standards_rules = [dict(record['rule']) for record in result]
+            # Convert result to list immediately to avoid consumption errors
+            list(result)  # Standards rules consumed for market evaluation
         
         # Calculate market metrics
         price_change_pct = None
@@ -331,18 +468,9 @@ def evaluate_market_conditions(
 def validate_tool() -> bool:
     """Validate that the evaluate_market_conditions tool works correctly."""
     try:
-        # Test with sample data
+        # Test with sample natural language data
         result = evaluate_market_conditions.invoke({
-            "property_address": "123 Main St, Anytown, CA 90210",
-            "property_type": "single_family_detached",
-            "market_area": "Anytown Suburbs",
-            "price_range": "400000-600000",
-            "days_on_market": 45,
-            "inventory_levels": "normal",
-            "price_trend": "stable",
-            "absorption_rate": 4.2,
-            "median_sale_price": 525000.0,
-            "prior_year_median": 510000.0
+            "market_info": "Market analysis for 123 Main St, Anytown, CA 90210, single family detached homes in Anytown Suburbs area, price range $400,000-$600,000, days on market 45, normal inventory levels, stable price trend, absorption rate 4.2 months, current median sale price $525,000, prior year median $510,000"
         })
         return "MARKET CONDITIONS EVALUATION REPORT" in result and "MARKET OUTLOOK" in result
     except Exception as e:

@@ -475,7 +475,10 @@ def list_applications(limit: int = 10) -> Tuple[bool, Any]:
         result = connection.execute_query(query, {"limit": limit})
         applications = []
         
-        for record in result:
+        # Convert result to list immediately to avoid consumption errors
+        records = list(result)
+        
+        for record in records:
             applications.append({
                 "application_id": record["application_id"],
                 "first_name": record["first_name"],

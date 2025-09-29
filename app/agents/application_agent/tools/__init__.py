@@ -16,7 +16,6 @@ Currently Implemented Tools (All 6 - 100% data-driven from Neo4j):
 - receive_mortgage_application: Complete application intake and validation
 - check_application_completeness: Verify all required documentation and data
 - perform_initial_qualification: Pre-screening and qualification assessment
-- coordinate_workflow_routing: Intelligent routing decisions across agent workflow
 - track_application_status: Comprehensive status tracking and milestone management
 - generate_urla_1003_form: Standardized URLA Form 1003 generation with compliance validation
 
@@ -34,7 +33,6 @@ from langchain_core.tools import BaseTool
 from .receive_mortgage_application import receive_mortgage_application, validate_tool as validate_receive_mortgage_application
 from .check_application_completeness import check_application_completeness, validate_tool as validate_check_application_completeness
 from .perform_initial_qualification import perform_initial_qualification, validate_tool as validate_perform_initial_qualification
-from .coordinate_workflow_routing import coordinate_workflow_routing, validate_tool as validate_coordinate_workflow_routing
 from .track_application_status import track_application_status, validate_tool as validate_track_application_status
 from .generate_urla_1003_form import generate_urla_1003_form, validate_tool as validate_generate_urla_1003_form
 
@@ -61,7 +59,6 @@ def get_all_application_agent_tools() -> List[BaseTool]:
     - Mortgage application intake and validation (receive_mortgage_application)
     - Application completeness verification (check_application_completeness)
     - Initial qualification assessment (perform_initial_qualification)
-    - Workflow routing coordination (coordinate_workflow_routing)
     - Application status tracking and management (track_application_status)
     - URLA Form 1003 generation and compliance (generate_urla_1003_form)
     """
@@ -69,7 +66,6 @@ def get_all_application_agent_tools() -> List[BaseTool]:
         receive_mortgage_application,  # Now enabled - application storage functionality
         check_application_completeness,
         perform_initial_qualification,
-        coordinate_workflow_routing,
         track_application_status,
         generate_urla_1003_form,
         
@@ -88,7 +84,6 @@ def get_tool_descriptions() -> Dict[str, str]:
         "receive_mortgage_application": "Complete mortgage application intake with validation and initial processing using Neo4j application rules",
         "check_application_completeness": "Verify application completeness against loan type and employment requirements using Neo4j validation rules",
         "perform_initial_qualification": "Assess initial qualification across multiple loan programs and provide routing recommendations using Neo4j qualification rules",
-        "coordinate_workflow_routing": "Intelligent routing decisions across the agent workflow based on application status and requirements using Neo4j routing rules",
         "track_application_status": "Comprehensive application status tracking, milestone management, and progress reporting using Neo4j status rules",
         "generate_urla_1003_form": "Generate standardized URLA Form 1003 from application data with compliance validation using Neo4j URLA rules"
     }
@@ -102,7 +97,6 @@ def validate_all_tools() -> Dict[str, bool]:
     results["receive_mortgage_application"] = validate_receive_mortgage_application()
     results["check_application_completeness"] = validate_check_application_completeness()
     results["perform_initial_qualification"] = validate_perform_initial_qualification()
-    results["coordinate_workflow_routing"] = validate_coordinate_workflow_routing()
     results["track_application_status"] = validate_track_application_status()
     results["generate_urla_1003_form"] = validate_generate_urla_1003_form()
     return results
@@ -113,7 +107,6 @@ __all__ = [
     "receive_mortgage_application",
     "check_application_completeness",
     "perform_initial_qualification",
-    "coordinate_workflow_routing",
     "track_application_status",
     "generate_urla_1003_form",
     
@@ -121,7 +114,6 @@ __all__ = [
     "validate_receive_mortgage_application",
     "validate_check_application_completeness",
     "validate_perform_initial_qualification",
-    "validate_coordinate_workflow_routing", 
     "validate_track_application_status",
     "validate_generate_urla_1003_form",
     

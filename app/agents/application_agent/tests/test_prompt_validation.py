@@ -53,7 +53,6 @@ try:
         "receive_mortgage_application",
         "check_application_completeness", 
         "perform_initial_qualification",
-        "coordinate_workflow_routing",
         "track_application_status"
     ]
     

@@ -1,0 +1,63 @@
+FIRST NATIONAL BANK OF TEXAS
+1234 Main Street
+Austin, TX 78701
+
+MONTHLY STATEMENT
+Statement Period: 10/16/2024 - 11/15/2024
+Statement Date: 11/16/2024
+
+ACCOUNT HOLDER: Sarah Johnson
+ACCOUNT NUMBER: ****4567
+ROUTING NUMBER: 111000025
+ACCOUNT TYPE: Checking Plus
+
+ADDRESS:
+2100 Guadalupe St
+Austin, TX 78705
+
+ACCOUNT SUMMARY
+Previous Balance (10/15/2024):      $72,450.82
+Total Deposits:                     $5,418.18
+Total Withdrawals:                  $3,125.67
+Service Charges:                    $0.00
+Interest Earned:                    $12.15
+Ending Balance (11/15/2024):        $74,755.48
+
+TRANSACTION DETAIL
+
+DEPOSITS & CREDITS
+11/08/2024  DIRECT DEPOSIT TECHCORP      $2,709.09
+10/25/2024  DIRECT DEPOSIT TECHCORP      $2,709.09
+                                    ___________
+TOTAL DEPOSITS                      $5,418.18
+
+WITHDRAWALS & DEBITS  
+11/12/2024  ACH PAYMENT AUSTIN RENT      $1,850.00
+11/10/2024  VISA PURCHASE WHOLE FOODS    $127.34
+11/08/2024  ATM WITHDRAWAL               $100.00
+11/05/2024  AUTO PAYMENT HONDA FINANCE   $385.50
+11/03/2024  VISA PURCHASE SHELL GAS      $45.82
+11/01/2024  ACH PAYMENT GEICO AUTO       $125.00
+10/30/2024  VISA PURCHASE AMAZON         $89.45
+10/28/2024  VISA PURCHASE STARBUCKS      $12.56
+10/25/2024  CHECK 1234 UTILITIES         $185.00
+10/22/2024  VISA PURCHASE TARGET         $205.00
+                                    ___________
+TOTAL WITHDRAWALS                   $3,125.67
+
+INTEREST EARNED
+11/15/2024  MONTHLY INTEREST CREDIT      $12.15
+
+MONTHLY SERVICE CHARGE              $0.00
+
+AVERAGE DAILY BALANCE:              $73,842.15
+DAYS IN STATEMENT PERIOD:           31
+
+ACCOUNT BENEFITS:
+- No minimum balance requirement
+- Free online banking and mobile app
+- Free nationwide ATM network
+- Overdraft protection available
+
+For customer service: 1-800-555-0123
+Online banking: www.fnbtexas.com

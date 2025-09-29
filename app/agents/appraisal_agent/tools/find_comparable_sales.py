@@ -7,8 +7,7 @@ based on Neo4j property appraisal rules.
 
 import json
 import logging
-from typing import Dict, List, Any, Optional
-from pydantic import BaseModel, Field
+from typing import Dict, Any
 from langchain_core.tools import tool
 
 try:
@@ -19,37 +18,148 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class ComparableSalesRequest(BaseModel):
-    """Comparable sales search request parameters."""
-    subject_property_address: str = Field(..., description="Subject property address")
-    property_type: str = Field(..., description="Property type (single_family_detached, condominium, townhouse, etc.)")
-    gross_living_area: int = Field(..., description="Subject property gross living area in square feet")
-    bedrooms: int = Field(..., description="Number of bedrooms")
-    bathrooms: float = Field(..., description="Number of bathrooms")
-    year_built: int = Field(..., description="Year subject property was built")
-    lot_size: Optional[float] = Field(None, description="Lot size in acres")
-    search_radius_miles: Optional[float] = Field(1.0, description="Search radius in miles")
-    max_age_months: Optional[int] = Field(12, description="Maximum age of comparables in months")
+def parse_property_info(property_info: str) -> Dict[str, Any]:
+    """Extract property information from natural language description."""
+    import re
+    
+    # Initialize with safe defaults
+    parsed = {
+        "subject_property_address": "",
+        "property_type": "single_family_detached",
+        "gross_living_area": 2000,  # Default square footage
+        "bedrooms": 3,             # Default bedrooms
+        "bathrooms": 2.0,          # Default bathrooms  
+        "year_built": 2000,        # Default year built
+        "lot_size": 0.25,          # Default lot size in acres
+        "search_radius_miles": 1.0,
+        "max_age_months": 12
+    }
+    
+    info_lower = property_info.lower()
+    
+    # Extract property address - look for common address patterns
+    address_patterns = [
+        r'(?:property|house|home)?\s*(?:at|address|located)?\s*([^,\n]+(?:,\s*[^,\n]+)*(?:,\s*[A-Z]{2})?)',
+        r'(\d+\s+[A-Za-z\s]+(?:st|ave|rd|dr|blvd|ct|ln|way|pl)\.?(?:,\s*[^,\n]+)*)',
+        r'((?:\d+\s+)?[A-Za-z\s]+(?:street|avenue|road|drive|boulevard|court|lane|way|place)(?:,\s*[^,\n]+)*)'
+    ]
+    
+    for pattern in address_patterns:
+        address_match = re.search(pattern, property_info, re.IGNORECASE)
+        if address_match:
+            parsed["subject_property_address"] = address_match.group(1).strip()
+            break
+    
+    # Extract square footage/living area
+    sqft_patterns = [
+        r'(\d{1,4})\s*(?:sq\s*ft|square\s*feet|sqft)',
+        r'(\d{1,4})\s*(?:square\s*foot|sq\s*foot)',
+        r'(?:living\s*area|gla|square\s*footage)\s*(?:is|of|:)?\s*(\d{1,4})'
+    ]
+    
+    for pattern in sqft_patterns:
+        sqft_match = re.search(pattern, info_lower)
+        if sqft_match:
+            parsed["gross_living_area"] = int(sqft_match.group(1))
+            break
+    
+    # Extract bedrooms
+    bed_patterns = [
+        r'(\d+)\s*(?:bed|bedroom)s?',
+        r'(?:bed|bedroom)s?\s*(?:is|:)?\s*(\d+)'
+    ]
+    
+    for pattern in bed_patterns:
+        bed_match = re.search(pattern, info_lower)
+        if bed_match:
+            parsed["bedrooms"] = int(bed_match.group(1))
+            break
+    
+    # Extract bathrooms
+    bath_patterns = [
+        r'(\d+(?:\.\d+)?)\s*(?:bath|bathroom)s?',
+        r'(?:bath|bathroom)s?\s*(?:is|:)?\s*(\d+(?:\.\d+)?)'
+    ]
+    
+    for pattern in bath_patterns:
+        bath_match = re.search(pattern, info_lower)
+        if bath_match:
+            parsed["bathrooms"] = float(bath_match.group(1))
+            break
+    
+    # Extract year built
+    year_patterns = [
+        r'(?:built|constructed)\s*(?:in|:)?\s*(19\d{2}|20\d{2})',
+        r'(?:year\s*built|build\s*year)\s*(?:is|:)?\s*(19\d{2}|20\d{2})',
+        r'(19\d{2}|20\d{2})\s*(?:built|construction)'
+    ]
+    
+    for pattern in year_patterns:
+        year_match = re.search(pattern, info_lower)
+        if year_match:
+            parsed["year_built"] = int(year_match.group(1))
+            break
+    
+    # Extract property type
+    if 'condo' in info_lower or 'condominium' in info_lower:
+        parsed["property_type"] = "condominium"
+    elif 'townhouse' in info_lower or 'town house' in info_lower:
+        parsed["property_type"] = "townhouse"
+    elif 'single family' in info_lower or 'single-family' in info_lower or 'detached' in info_lower:
+        parsed["property_type"] = "single_family_detached"
+    elif 'duplex' in info_lower:
+        parsed["property_type"] = "duplex"
+    
+    # Extract lot size
+    lot_patterns = [
+        r'(\d+(?:\.\d+)?)\s*acres?',
+        r'lot\s*(?:size|:)\s*(\d+(?:\.\d+)?)\s*acres?'
+    ]
+    
+    for pattern in lot_patterns:
+        lot_match = re.search(pattern, info_lower)
+        if lot_match:
+            parsed["lot_size"] = float(lot_match.group(1))
+            break
+    
+    # Extract search preferences
+    if 'radius' in info_lower:
+        radius_match = re.search(r'(\d+(?:\.\d+)?)\s*miles?\s*radius', info_lower)
+        if radius_match:
+            parsed["search_radius_miles"] = float(radius_match.group(1))
+    
+    return parsed
 
 
-@tool(args_schema=ComparableSalesRequest)
+@tool
 def find_comparable_sales(
-    subject_property_address: str,
-    property_type: str,
-    gross_living_area: int,
-    bedrooms: int,
-    bathrooms: float,
-    year_built: int,
-    lot_size: Optional[float] = None,
-    search_radius_miles: Optional[float] = 1.0,
-    max_age_months: Optional[int] = 12
+    property_info: str
 ) -> str:
     """
     Find and analyze comparable sales for property valuation using Neo4j appraisal rules.
     
     This tool searches for appropriate comparable sales and provides adjustment analysis
     based on property appraisal rules and industry standards.
+    
+    Provide property information in natural language, such as:
+    "I found a house at 123 Oak Street, Austin, TX. It's listed for $450,000. 3 bedrooms, 2.5 baths, 2000 sq ft, built in 2010"
+    "Property at 456 Main St, Dallas TX - 4 bed, 3 bath single family home, 2500 sqft, built 2015, on 0.3 acres"
+    "Condo at 789 Pine Ave - 2 bedrooms, 2 bathrooms, 1200 square feet, year built 2008"
     """
+    
+    # Parse the natural language input
+    parsed_info = parse_property_info(property_info)
+    
+    # Extract all the parameters
+    subject_property_address = parsed_info["subject_property_address"]
+    property_type = parsed_info["property_type"]
+    gross_living_area = parsed_info["gross_living_area"]
+    bedrooms = parsed_info["bedrooms"]
+    bathrooms = parsed_info["bathrooms"]
+    year_built = parsed_info["year_built"]
+    lot_size = parsed_info["lot_size"]
+    search_radius_miles = parsed_info["search_radius_miles"]
+    max_age_months = parsed_info["max_age_months"]
     
     try:
         # Initialize Neo4j connection
@@ -280,17 +390,9 @@ def find_comparable_sales(
 def validate_tool() -> bool:
     """Validate that the find_comparable_sales tool works correctly."""
     try:
-        # Test with sample data
+        # Test with sample natural language data
         result = find_comparable_sales.invoke({
-            "subject_property_address": "123 Main St, Anytown, CA 90210",
-            "property_type": "single_family_detached",
-            "gross_living_area": 2000,
-            "bedrooms": 3,
-            "bathrooms": 2.5,
-            "year_built": 2010,
-            "lot_size": 0.25,
-            "search_radius_miles": 1.0,
-            "max_age_months": 12
+            "property_info": "Property at 123 Main St, Anytown, CA 90210 - single family home, 3 bedrooms, 2.5 bathrooms, 2000 sq ft, built in 2010, 0.25 acres"
         })
         return "COMPARABLE SALES ANALYSIS REPORT" in result and "VALUE INDICATION" in result
     except Exception as e:

@@ -1,0 +1,54 @@
+TECHCORP AUSTIN
+500 W 2nd St, Ste 1400
+Austin, TX 78701
+EIN: 54-1234567
+
+PAYROLL STATEMENT
+Pay Period: 11/01/2024 - 11/15/2024
+Pay Date: 11/22/2024
+
+EMPLOYEE INFORMATION
+Name: Sarah Johnson
+Employee ID: TC-2019-0847
+SSN: XXX-XX-6789
+Address: 2100 Guadalupe St
+         Austin, TX 78705
+
+Position: Senior Software Engineer
+Department: Product Engineering
+Hire Date: 08/15/2020
+
+EARNINGS                    CURRENT    YTD
+Regular Wages (80.00 hrs)   $4,166.67  $93,750.08
+Overtime Wages (0.00 hrs)   $0.00      $0.00
+Bonus                       $0.00      $2,500.00
+Total Gross Pay             $4,166.67  $96,250.08
+
+DEDUCTIONS                  CURRENT    YTD
+Federal Income Tax          $752.00    $17,325.01
+Social Security Tax (6.2%)  $258.33    $5,967.51
+Medicare Tax (1.45%)        $60.42     $1,395.63
+State Income Tax (TX)       $0.00      $0.00
+Health Insurance            $145.50    $1,746.00
+Dental Insurance            $25.00     $300.00
+Vision Insurance            $8.50      $102.00
+401(k) Contribution (5%)    $208.33    $4,812.50
+Total Deductions           $1,457.58  $31,648.65
+
+NET PAY                     $2,709.09  $64,601.43
+
+EMPLOYER CONTRIBUTIONS      CURRENT    YTD
+401(k) Match (3%)           $125.00    $2,887.50
+Health Insurance            $290.00    $3,480.00
+FICA Match                  $318.75    $7,363.14
+SUTA                        $12.50     $288.75
+Workers Comp                $8.33      $192.50
+
+LEAVE BALANCES
+Vacation Hours: 120.5
+Sick Hours: 80.0
+Personal Hours: 24.0
+
+This is not a check. Direct deposit information:
+Account ending in: ****4567
+Routing: 111000025

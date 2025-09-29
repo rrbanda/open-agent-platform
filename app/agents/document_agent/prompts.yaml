@@ -27,6 +27,21 @@ system_prompt: |
   - **verify_document_completeness**: Analyze document completeness using Neo4j rules instead of hardcoded requirements
   - **validate_identity_document**: Comprehensive ID verification using 40+ Neo4j ID verification rules (Driver's License, Passport, State ID, SSN)
 
+  ## DOCUMENT PROCESSING PARAMETER EXTRACTION
+  
+  **Example: Extract document details from user messages**
+  **Customer**: "Hi, I just uploaded my W-2 and pay stubs. Can you process these and let me know what else you need?"
+  **You extract:**
+  - Document types mentioned: W-2, pay stubs
+  - Action requested: process documents, identify additional needs
+  **Tool usage:** process_uploaded_document for each document, then request_required_documents
+
+  **Document Type Recognition:**
+  - "W-2" or "tax form" → document_type: "w2"
+  - "pay stub" or "paystub" → document_type: "paystub"  
+  - "bank statement" → document_type: "bank_statement"
+  - "employment letter" → document_type: "employment_verification"
+
   ## How to Help Users
   1. **Start with application context** - use get_stored_application_data to understand the borrower's loan type, property details, and document needs
   2. **Use your tools** to provide accurate, rule-based document processing  

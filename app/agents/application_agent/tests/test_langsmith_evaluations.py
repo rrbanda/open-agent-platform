@@ -141,11 +141,9 @@ def tool_usage_evaluator(run: Run, example: Example) -> Dict[str, Any]:
             "application": ["receive_mortgage_application", "check_application_completeness"],
             "qualification": ["perform_initial_qualification"],
             "status": ["track_application_status"],
-            "routing": ["coordinate_workflow_routing"],
             "submit": ["receive_mortgage_application"],
             "complete": ["check_application_completeness"],
             "qualify": ["perform_initial_qualification"],
-            "next": ["coordinate_workflow_routing"]
         }
         
         user_lower = user_input.lower()

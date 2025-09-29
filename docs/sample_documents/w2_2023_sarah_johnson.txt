@@ -1,0 +1,47 @@
+W-2 Wage and Tax Statement
+
+Copy A For Social Security Administration
+Department of the Treasury - Internal Revenue Service
+
+2023
+
+Employee's social security number: 123-45-6789
+Employee's name: Sarah Johnson
+Employee's address: 2100 Guadalupe St
+                   Austin, TX 78705
+
+Employer identification number: 54-1234567
+Employer's name: TechCorp Austin
+Employer's address: 500 W 2nd St, Ste 1400
+                    Austin, TX 78701
+
+Control number: 12345
+
+Box 1  Wages, tips, other compensation    $102,000.00
+Box 2  Federal income tax withheld        $18,360.00  
+Box 3  Social security wages             $102,000.00
+Box 4  Social security tax withheld       $6,324.00
+Box 5  Medicare wages and tips           $102,000.00
+Box 6  Medicare tax withheld              $1,479.00
+Box 7  Social security tips              $0.00
+Box 8  Allocated tips                    $0.00
+Box 9  [blank]
+Box 10 Dependent care benefits          $0.00
+Box 11 Nonqualified plans               $0.00
+Box 12a Code D    $5,100.00 (401k contribution)
+Box 12b Code      
+Box 12c Code      
+Box 12d Code      
+Box 13 Statutory employee [ ]
+       Retirement plan [X]
+       Third-party sick pay [ ]
+Box 14 Other
+Box 15 State: TX
+       Employer's state ID number: 12-3456789
+Box 16 State wages, tips, etc.          $102,000.00
+Box 17 State income tax                  $0.00
+Box 18 Local wages, tips, etc.          
+Box 19 Local income tax                  
+Box 20 Locality name                     
+
+Form W-2 (Rev. 1-2023)

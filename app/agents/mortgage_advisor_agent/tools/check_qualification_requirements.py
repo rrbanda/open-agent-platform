@@ -113,9 +113,10 @@ def check_qualification_requirements(
                 """
                 result = session.run(query)
             
-            # Collect program data
+            # Collect program data - convert result to list to avoid consumption errors
+            records = list(result)
             programs_data = []
-            for record in result:
+            for record in records:
                 programs_data.append({
                     'program': dict(record['lp']),
                     'requirements': [dict(req) for req in record['requirements'] if req]
@@ -177,7 +178,9 @@ def _get_available_programs(connection) -> List[str]:
     try:
         with connection.driver.session(database=connection.database) as session:
             result = session.run("MATCH (lp:LoanProgram) RETURN lp.name as name ORDER BY name")
-            return [record["name"] for record in result]
+            # Convert to list to avoid consumption errors
+            records = list(result)
+            return [record["name"] for record in records]
     except Exception as e:
         # Return empty list instead of hardcoded fallback - 100% data-driven
         logger.error(f"Failed to get available programs from Neo4j: {e}")
@@ -275,8 +278,10 @@ def _get_special_requirements(program_name: str, military_status: str,
         ORDER BY sr.requirement_type
         """
         result = session.run(query, {"program_name": program_name})
+        # Convert to list to avoid consumption errors
+        records = list(result)
         
-        for record in result:
+        for record in records:
             req_data = dict(record["sr"])
             req_type = req_data["requirement_type"]
             

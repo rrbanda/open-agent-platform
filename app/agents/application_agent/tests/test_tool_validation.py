@@ -8,7 +8,6 @@ Tools tested:
 - receive_mortgage_application: Application intake and validation
 - check_application_completeness: Completeness verification  
 - perform_initial_qualification: Initial qualification assessment
-- coordinate_workflow_routing: Workflow routing decisions
 - track_application_status: Application status tracking
 """
 
@@ -26,7 +25,6 @@ try:
         receive_mortgage_application,
         check_application_completeness,
         perform_initial_qualification,
-        coordinate_workflow_routing,
         track_application_status,
         validate_all_tools
     )
@@ -149,36 +147,8 @@ try:
     assert "OVERALL ASSESSMENT" in qualification_result
     print("    Initial qualification assessment working")
     
-    # Test 5: Workflow routing test
-    print("\n5. Testing coordinate_workflow_routing...")
-    routing_result = coordinate_workflow_routing.invoke({
-        "application_id": "APP_20240101_123456_DOE",
-        "current_status": "complete",
-        "application_complete": True,
-        "qualification_status": "QUALIFIED",
-        "credit_score": 750,
-        "first_time_buyer": True,
-        "loan_program_questions": False,
-        "qualification_concerns": False,
-        "documents_verified": False,
-        "appraisal_needed": True,
-        "appraisal_completed": False,
-        "property_value_questions": False,
-        "market_analysis_needed": False,
-        "loan_purpose": "purchase",
-        "property_type": "condominium",
-        "loan_amount": 500000.0,
-        "purchase_contract_expiring": False,
-        "rate_lock_expiring": False,
-        "closing_within_30_days": False
-    })
-    
-    assert "WORKFLOW ROUTING ANALYSIS" in routing_result
-    assert "ROUTING INSTRUCTION" in routing_result
-    print("    Workflow routing coordination working")
-    
-    # Test 6: Application status tracking test
-    print("\n6. Testing track_application_status...")
+    # Test 5: Application status tracking test
+    print("\n5. Testing track_application_status...")
     status_result = track_application_status.invoke({
         "application_id": "APP_20240101_123456_DOE",
         "current_status": "in_processing",

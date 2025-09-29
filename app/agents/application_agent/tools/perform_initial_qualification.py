@@ -7,8 +7,7 @@ based on Neo4j application intake rules.
 
 import json
 import logging
-from typing import Dict, List, Any, Optional
-from pydantic import BaseModel, Field
+from typing import Dict, Any
 from langchain_core.tools import tool
 
 try:
@@ -33,61 +32,167 @@ def parse_neo4j_rule(rule_dict: Dict[str, Any]) -> Dict[str, Any]:
     return parsed_rule
 
 
-class InitialQualificationRequest(BaseModel):
-    """Initial qualification assessment request parameters."""
-    application_id: str = Field(..., description="Application ID")
-    credit_score: int = Field(..., description="Credit score")
-    monthly_gross_income: float = Field(..., description="Monthly gross income")
-    monthly_debts: float = Field(..., description="Total monthly debt payments")
-    liquid_assets: float = Field(..., description="Available liquid assets")
-    employment_years: float = Field(..., description="Years with current employer")
-    employment_type: str = Field(..., description="Employment type (w2, self_employed, contract)")
-    loan_amount: float = Field(..., description="Requested loan amount")
-    property_value: float = Field(..., description="Property value")
-    down_payment: float = Field(..., description="Down payment amount")
-    property_type: str = Field(..., description="Property type")
-    occupancy_type: str = Field(..., description="Occupancy type")
-    loan_purpose: str = Field(..., description="Loan purpose")
-    first_time_buyer: bool = Field(default=False, description="First-time home buyer")
-    military_service: bool = Field(default=False, description="Military service")
-    rural_property: bool = Field(default=False, description="Rural property location")
+def parse_borrower_info(borrower_info: str) -> Dict[str, Any]:
+    """Extract key financial information from natural language borrower description."""
+    import re
     
-    # Credit history details
-    bankruptcy_history: bool = Field(default=False, description="Bankruptcy history")
-    foreclosure_history: bool = Field(default=False, description="Foreclosure history")
-    collections_amount: float = Field(default=0, description="Outstanding collections amount")
-    late_payments_12_months: int = Field(default=0, description="Late payments in last 12 months")
+    # Initialize with safe defaults
+    parsed = {
+        "credit_score": 650,  # Default middle credit score
+        "monthly_gross_income": 5000.0,
+        "monthly_debts": 500.0, 
+        "liquid_assets": 20000.0,
+        "employment_years": 2.0,
+        "employment_type": "w2",
+        "loan_amount": 300000.0,
+        "property_value": 375000.0,  # 20% down assumption
+        "down_payment": 60000.0,  # 20% down assumption
+        "property_type": "single_family_detached",
+        "occupancy_type": "primary_residence", 
+        "loan_purpose": "purchase",
+        "application_id": "TEMP_QUALIFICATION",
+        "first_time_buyer": False,
+        "military_service": False,
+        "rural_property": False,
+        "bankruptcy_history": False,
+        "foreclosure_history": False,
+        "collections_amount": 0.0,
+        "late_payments_12_months": 0
+    }
+    
+    info_lower = borrower_info.lower()
+    
+    # Extract credit score
+    credit_match = re.search(r'credit\s*(?:score)?\s*(?:is|of)?\s*(\d{3})', info_lower)
+    if credit_match:
+        parsed["credit_score"] = int(credit_match.group(1))
+    
+    # Extract monthly income - look for monthly first, then annual
+    monthly_income_match = re.search(r'(?:monthly\s*)?income\s*(?:is|of)?\s*\$?([0-9,]+)(?:\s*/?\s*month)?', info_lower)
+    annual_income_match = re.search(r'(?:annual|yearly)\s*income\s*(?:is|of)?\s*\$?([0-9,]+)', info_lower)
+    salary_match = re.search(r'salary\s*(?:is|of)?\s*\$?([0-9,]+)', info_lower)
+    
+    if monthly_income_match:
+        parsed["monthly_gross_income"] = float(monthly_income_match.group(1).replace(',', ''))
+    elif annual_income_match:
+        annual_income = float(annual_income_match.group(1).replace(',', ''))
+        parsed["monthly_gross_income"] = annual_income / 12
+    elif salary_match:
+        # Assume salary is annual
+        annual_salary = float(salary_match.group(1).replace(',', ''))
+        parsed["monthly_gross_income"] = annual_salary / 12
+    
+    # Extract loan amount
+    loan_match = re.search(r'loan\s*(?:amount|for)?\s*(?:is|of)?\s*\$?([0-9,]+)', info_lower)
+    # More flexible home price matching
+    home_price_match = re.search(r'(?:(?:home|house|property)\s*(?:price|cost|value)?\s*(?:is|of)?\s*\$?([0-9,]+)|(?:looking\s*at|buying)\s*(?:a\s*)?\$?([0-9,]+)\s*(?:home|house|property))', info_lower)
+    
+    if loan_match:
+        parsed["loan_amount"] = float(loan_match.group(1).replace(',', ''))
+    elif home_price_match:
+        # Handle multiple capture groups
+        property_value = None
+        for group in home_price_match.groups():
+            if group:
+                property_value = float(group.replace(',', ''))
+                break
+        parsed["property_value"] = property_value
+        # Assume 20% down payment
+        parsed["loan_amount"] = property_value * 0.8
+        parsed["down_payment"] = property_value * 0.2
+    
+    # Extract down payment
+    down_payment_match = re.search(r'(?:down\s*payment|down)\s*(?:is|of)?\s*\$?([0-9,]+)', info_lower)
+    down_percent_match = re.search(r'(\d+)%\s*down', info_lower)
+    
+    if down_payment_match:
+        parsed["down_payment"] = float(down_payment_match.group(1).replace(',', ''))
+        # Calculate property value if not already set
+        if parsed["property_value"] == 375000.0:  # default value
+            parsed["property_value"] = parsed["loan_amount"] + parsed["down_payment"]
+    elif down_percent_match:
+        down_percent = float(down_percent_match.group(1)) / 100
+        if parsed["property_value"] > 375000.0 or loan_match:  # We have property value or loan amount
+            if parsed["property_value"] == 375000.0:  # Use loan amount
+                parsed["property_value"] = parsed["loan_amount"] / (1 - down_percent)
+            parsed["down_payment"] = parsed["property_value"] * down_percent
+            parsed["loan_amount"] = parsed["property_value"] - parsed["down_payment"]
+    
+    # Extract monthly debts
+    debt_match = re.search(r'(?:monthly\s*)?debt(?:s)?\s*(?:is|of)?\s*\$?([0-9,]+)', info_lower)
+    if debt_match:
+        parsed["monthly_debts"] = float(debt_match.group(1).replace(',', ''))
+    
+    # Extract assets/savings
+    assets_match = re.search(r'(?:assets?|savings?|cash)\s*(?:is|of)?\s*\$?([0-9,]+)', info_lower)
+    if assets_match:
+        parsed["liquid_assets"] = float(assets_match.group(1).replace(',', ''))
+    
+    # Extract employment information
+    if 'self employed' in info_lower or 'self-employed' in info_lower:
+        parsed["employment_type"] = "self_employed"
+    elif 'contract' in info_lower:
+        parsed["employment_type"] = "contract"
+    
+    employment_match = re.search(r'(\d+)\s*years?\s*(?:employed|job|work)', info_lower)
+    if employment_match:
+        parsed["employment_years"] = float(employment_match.group(1))
+    
+    # Extract special conditions
+    if 'first time' in info_lower or 'first-time' in info_lower:
+        parsed["first_time_buyer"] = True
+    if 'military' in info_lower or 'veteran' in info_lower or 'va loan' in info_lower:
+        parsed["military_service"] = True
+    if 'rural' in info_lower or 'usda' in info_lower:
+        parsed["rural_property"] = True
+    if 'bankruptcy' in info_lower:
+        parsed["bankruptcy_history"] = True
+    if 'foreclosure' in info_lower:
+        parsed["foreclosure_history"] = True
+    
+    return parsed
 
 
-@tool(args_schema=InitialQualificationRequest)
+@tool  
 def perform_initial_qualification(
-    application_id: str,
-    credit_score: int,
-    monthly_gross_income: float,
-    monthly_debts: float,
-    liquid_assets: float,
-    employment_years: float,
-    employment_type: str,
-    loan_amount: float,
-    property_value: float,
-    down_payment: float,
-    property_type: str,
-    occupancy_type: str,
-    loan_purpose: str,
-    first_time_buyer: bool = False,
-    military_service: bool = False,
-    rural_property: bool = False,
-    bankruptcy_history: bool = False,
-    foreclosure_history: bool = False,
-    collections_amount: float = 0,
-    late_payments_12_months: int = 0
+    borrower_info: str
 ) -> str:
     """
     Perform initial qualification assessment using Neo4j application intake rules.
     
     This tool evaluates initial qualification across multiple loan programs
     and provides routing recommendations for the application workflow.
+    
+    Provide borrower information in natural language, such as:
+    "Credit score is 720, monthly income $8,500, looking at $450,000 home with 15% down"
+    "I make $75,000 annually, credit score 680, have $30,000 saved for down payment"
+    "Self-employed 3 years, monthly income $6,000, credit 710, loan amount $350,000"
     """
+    
+    # Parse the natural language input
+    parsed_info = parse_borrower_info(borrower_info)
+    
+    # Extract all the parameters
+    credit_score = parsed_info["credit_score"]
+    monthly_gross_income = parsed_info["monthly_gross_income"]  
+    monthly_debts = parsed_info["monthly_debts"]
+    liquid_assets = parsed_info["liquid_assets"]
+    employment_years = parsed_info["employment_years"]
+    employment_type = parsed_info["employment_type"]
+    loan_amount = parsed_info["loan_amount"]
+    property_value = parsed_info["property_value"]
+    down_payment = parsed_info["down_payment"]
+    property_type = parsed_info["property_type"]
+    occupancy_type = parsed_info["occupancy_type"]
+    loan_purpose = parsed_info["loan_purpose"]
+    application_id = parsed_info["application_id"]
+    first_time_buyer = parsed_info["first_time_buyer"]
+    military_service = parsed_info["military_service"]
+    rural_property = parsed_info["rural_property"]
+    bankruptcy_history = parsed_info["bankruptcy_history"]
+    foreclosure_history = parsed_info["foreclosure_history"]
+    collections_amount = parsed_info["collections_amount"]
+    late_payments_12_months = parsed_info["late_payments_12_months"]
     
     try:
         # Initialize Neo4j connection
@@ -394,28 +499,9 @@ def perform_initial_qualification(
 def validate_tool() -> bool:
     """Validate that the perform_initial_qualification tool works correctly."""
     try:
-        # Test with sample data
+        # Test with sample natural language data
         result = perform_initial_qualification.invoke({
-            "application_id": "APP_20240101_123456_SMI",
-            "credit_score": 720,
-            "monthly_gross_income": 8000.0,
-            "monthly_debts": 1200.0,
-            "liquid_assets": 100000.0,
-            "employment_years": 4.0,
-            "employment_type": "w2",
-            "loan_amount": 400000.0,
-            "property_value": 500000.0,
-            "down_payment": 100000.0,
-            "property_type": "single_family_detached",
-            "occupancy_type": "primary_residence",
-            "loan_purpose": "purchase",
-            "first_time_buyer": False,
-            "military_service": False,
-            "rural_property": False,
-            "bankruptcy_history": False,
-            "foreclosure_history": False,
-            "collections_amount": 0,
-            "late_payments_12_months": 0
+            "borrower_info": "Credit score is 720, monthly income $8,000, monthly debts $1,200, have $100,000 in savings, employed 4 years W2, loan amount $400,000, property value $500,000, down payment $100,000"
         })
         return "INITIAL QUALIFICATION ASSESSMENT" in result and "OVERALL ASSESSMENT" in result
     except Exception as e:

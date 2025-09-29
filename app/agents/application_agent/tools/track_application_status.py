@@ -7,8 +7,7 @@ based on Neo4j application intake rules. Enhanced with agentic application retri
 
 import json
 import logging
-from typing import Dict, List, Any, Optional
-from pydantic import BaseModel, Field
+from typing import Dict, Any
 from langchain_core.tools import tool
 from datetime import datetime, timedelta
 
@@ -34,33 +33,21 @@ def parse_neo4j_rule(rule_dict: Dict[str, Any]) -> Dict[str, Any]:
     return parsed_rule
 
 
-class ApplicationStatusRequest(BaseModel):
-    """Application status tracking request parameters."""
-    application_id: str = Field(..., description="Application ID to track")
-    current_status: str = Field(..., description="Current status")
-    requested_action: str = Field(..., description="Action to perform (check_status, update_status, get_history)")
-    
-    # For status updates
-    new_status: Optional[str] = Field(None, description="New status to set")
-    status_notes: Optional[str] = Field(None, description="Notes about status change")
-    agent_name: Optional[str] = Field(None, description="Agent making the update")
-    completion_percentage: Optional[float] = Field(None, description="Completion percentage (0-100)")
-    
-    # For milestone tracking
-    milestone_reached: Optional[str] = Field(None, description="Milestone reached")
-    estimated_completion: Optional[str] = Field(None, description="Estimated completion date")
-    
-    # For issue tracking
-    issues_identified: Optional[List[str]] = Field(None, description="Issues identified")
-    resolution_required: Optional[bool] = Field(None, description="Resolution required")
 
 
 @tool
 def track_application_status(status_request: str) -> str:
-    """Track and manage application status using Neo4j application intake rules.
+    """
+    Track and manage application status using Neo4j application intake rules.
     
-    Args:
-        status_request: Status request like "Application APP_20250926_090605_JOH, current status: RECEIVED, action: check_status" or "Application APP_123 update status to APPROVED"
+    This tool provides comprehensive application status tracking, updates, and history
+    throughout the mortgage application workflow process.
+    
+    Provide status request information in natural language, such as:
+    "Check status of application APP_20250926_090605_JOH"
+    "Update application APP_123 status to APPROVED with notes: all documents received"
+    "Track application APP_456, current status RECEIVED, action check_status"
+    "Get history for application APP_789"
     """
     
     try:
@@ -319,7 +306,7 @@ def track_application_status(status_request: str) -> str:
         if comm_rule and requested_action == "update_status":
             status_report.append(f"\n📞 COMMUNICATION REQUIREMENTS:")
             
-            notification_triggers = comm_rule.get('notification_triggers', {})
+            # notification_triggers = comm_rule.get('notification_triggers', {})  # Available for notification logic
             
             # Check if notifications are required
             notifications_needed = []
@@ -449,11 +436,9 @@ def track_application_status(status_request: str) -> str:
 def validate_tool() -> bool:
     """Validate that the track_application_status tool works correctly."""
     try:
-        # Test with sample data
+        # Test with sample natural language data
         result = track_application_status.invoke({
-            "application_id": "APP_20240101_123456_SMI",
-            "current_status": "in_processing",
-            "requested_action": "check_status"
+            "status_request": "Check status of application APP_20240101_123456_SMI, current status in_processing, action check_status"
         })
         return "APPLICATION STATUS TRACKING" in result and "STATUS ANALYSIS" in result
     except Exception as e:

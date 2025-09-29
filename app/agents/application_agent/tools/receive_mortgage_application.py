@@ -7,8 +7,7 @@ based on Neo4j application intake rules. Enhanced with agentic application stora
 
 import json
 import logging
-from typing import Dict, List, Any, Optional
-from pydantic import BaseModel, Field
+from typing import Dict, Any
 from langchain_core.tools import tool
 from datetime import datetime
 
@@ -44,146 +43,275 @@ def parse_neo4j_rule(rule_dict: Dict[str, Any]) -> Dict[str, Any]:
     return parsed_rule
 
 
-class MortgageApplicationRequest(BaseModel):
-    """Mortgage application intake request parameters."""
-    # Personal Information
-    first_name: str = Field(..., description="Applicant's first name")
-    last_name: str = Field(..., description="Applicant's last name")
-    ssn: str = Field(..., description="Social Security Number (xxx-xx-xxxx)")
-    date_of_birth: str = Field(..., description="Date of birth (YYYY-MM-DD)")
-    phone: str = Field(..., description="Phone number (xxx-xxx-xxxx)")
-    email: str = Field(..., description="Email address")
+def parse_application_info(application_info: str) -> Dict[str, Any]:
+    """Extract complete application information from natural language description."""
+    import re
     
-    # Address Information
-    current_street: str = Field(..., description="Current street address")
-    current_city: str = Field(..., description="Current city")
-    current_state: str = Field(..., description="Current state")
-    current_zip: str = Field(..., description="Current ZIP code")
-    years_at_address: float = Field(..., description="Years at current address")
+    # Initialize with safe defaults
+    parsed = {
+        # Personal Information - will need validation
+        "first_name": "",
+        "last_name": "", 
+        "ssn": "",
+        "date_of_birth": "",
+        "phone": "",
+        "email": "",
+        
+        # Current Address
+        "current_street": "Address to be provided",
+        "current_city": "City to be provided",
+        "current_state": "ST",
+        "current_zip": "00000",
+        "years_at_address": 2.0,
+        
+        # Employment
+        "employer_name": "Employer to be provided",
+        "job_title": "Position to be provided", 
+        "years_employed": 2.0,
+        "monthly_gross_income": 0.0,
+        "employment_type": "w2",
+        
+        # Loan Details
+        "loan_purpose": "purchase",
+        "loan_amount": 0.0,
+        "property_address": "",
+        "property_value": 0.0,
+        "property_type": "single_family_detached",
+        "occupancy_type": "primary_residence",
+        
+        # Financial
+        "credit_score": 0,
+        "monthly_debts": 0.0,
+        "liquid_assets": 0.0,
+        "down_payment": 0.0,
+        
+        # Special flags
+        "first_time_buyer": False,
+        "military_service": False,
+        "rural_property": False,
+        
+        # Optional
+        "middle_name": "",
+        "marital_status": "Single"
+    }
     
-    # Employment Information
-    employer_name: str = Field(..., description="Current employer name")
-    job_title: str = Field(..., description="Job title/position")
-    years_employed: float = Field(..., description="Years with current employer")
-    monthly_gross_income: float = Field(..., description="Monthly gross income")
-    employment_type: str = Field(default="w2", description="Employment type (w2, self_employed, contract)")
+    info_lower = application_info.lower()
     
-    # Loan Information
-    loan_purpose: str = Field(..., description="Loan purpose (purchase, refinance, etc.)")
-    loan_amount: float = Field(..., description="Requested loan amount")
-    property_address: str = Field(..., description="Property address")
-    property_value: Optional[float] = Field(None, description="Property value estimate")
-    property_type: str = Field(..., description="Property type (single_family_detached, condominium, etc.)")
-    occupancy_type: str = Field(..., description="Occupancy type (primary_residence, second_home, investment_property)")
+    # Extract name components
+    name_match = re.search(r"(?:name|i'm|i am)\s+(?:is\s+)?([a-zA-Z]+(?:\s+[a-zA-Z]+)*)", application_info, re.IGNORECASE)
+    if name_match:
+        full_name = name_match.group(1).strip()
+        name_parts = full_name.split()
+        if len(name_parts) >= 2:
+            parsed["first_name"] = name_parts[0]
+            parsed["last_name"] = name_parts[-1]
+            if len(name_parts) > 2:
+                parsed["middle_name"] = " ".join(name_parts[1:-1])
+        elif len(name_parts) == 1:
+            parsed["first_name"] = name_parts[0]
     
-    # Financial Information
-    credit_score: Optional[int] = Field(None, description="Credit score if known")
-    monthly_debts: Optional[float] = Field(None, description="Total monthly debt payments")
-    liquid_assets: Optional[float] = Field(None, description="Liquid assets available")
-    down_payment: Optional[float] = Field(None, description="Down payment amount")
+    # Extract SSN
+    ssn_match = re.search(r'ssn\s*(?:is|:)?\s*(\d{3}-\d{2}-\d{4})', info_lower)
+    ssn_match_alt = re.search(r'social\s*security\s*(?:number)?\s*(?:is|:)?\s*(\d{3}-\d{2}-\d{4})', info_lower)
+    if ssn_match:
+        parsed["ssn"] = ssn_match.group(1)
+    elif ssn_match_alt:
+        parsed["ssn"] = ssn_match_alt.group(1)
     
-    # Additional Information
-    first_time_buyer: bool = Field(default=False, description="Is this a first-time home buyer")
-    military_service: bool = Field(default=False, description="Military service (for VA loans)")
-    rural_property: bool = Field(default=False, description="Rural property (for USDA loans)")
+    # Extract date of birth
+    dob_match = re.search(r'(?:birth|dob|born)\s*(?:date|on)?\s*(?:is|:)?\s*(\d{4}-\d{2}-\d{2})', info_lower)
+    dob_match_alt = re.search(r'(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})', application_info)
+    if dob_match:
+        parsed["date_of_birth"] = dob_match.group(1)
+    elif dob_match_alt:
+        # Convert MM/DD/YYYY to YYYY-MM-DD
+        date_str = dob_match_alt.group(1)
+        try:
+            if '/' in date_str:
+                parts = date_str.split('/')
+            else:
+                parts = date_str.split('-')
+            if len(parts) == 3 and len(parts[2]) == 4:
+                parsed["date_of_birth"] = f"{parts[2]}-{parts[0]:0>2}-{parts[1]:0>2}"
+        except:
+            pass
+    
+    # Extract phone
+    phone_match = re.search(r'phone\s*(?:number)?\s*(?:is|:)?\s*(\d{3}[-.]\d{3}[-.]\d{4})', application_info)
+    phone_match_alt = re.search(r'(\d{3}[-.]\d{3}[-.]\d{4})', application_info)
+    if phone_match:
+        parsed["phone"] = phone_match.group(1).replace('.', '-')
+    elif phone_match_alt:
+        parsed["phone"] = phone_match_alt.group(1).replace('.', '-')
+    
+    # Extract email
+    email_match = re.search(r'email\s*(?:address)?\s*(?:is|:)?\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', info_lower)
+    email_match_alt = re.search(r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', application_info)
+    if email_match:
+        parsed["email"] = email_match.group(1)
+    elif email_match_alt:
+        parsed["email"] = email_match_alt.group(1)
+    
+    # Extract income (monthly first, then annual)
+    monthly_income_match = re.search(r'(?:monthly\s*)?income\s*(?:is|of)?\s*\$?([0-9,]+)(?:\s*/?\s*month)?', info_lower)
+    annual_income_match = re.search(r'(?:annual|yearly)\s*income\s*(?:is|of)?\s*\$?([0-9,]+)', info_lower)
+    salary_match = re.search(r'salary\s*(?:is|of)?\s*\$?([0-9,]+)', info_lower)
+    
+    if monthly_income_match:
+        parsed["monthly_gross_income"] = float(monthly_income_match.group(1).replace(',', ''))
+    elif annual_income_match:
+        annual_income = float(annual_income_match.group(1).replace(',', ''))
+        parsed["monthly_gross_income"] = annual_income / 12
+    elif salary_match:
+        annual_salary = float(salary_match.group(1).replace(',', ''))
+        parsed["monthly_gross_income"] = annual_salary / 12
+    
+    # Extract loan amount and property info
+    loan_match = re.search(r'loan\s*(?:amount|for)?\s*(?:is|of)?\s*\$?([0-9,]+)', info_lower)
+    home_price_match = re.search(r'(?:(?:home|house|property)\s*(?:price|cost|value)?\s*(?:is|of)?\s*\$?([0-9,]+)|(?:looking\s*at|buying)\s*(?:a\s*)?\$?([0-9,]+)\s*(?:home|house|property))', info_lower)
+    
+    if loan_match:
+        parsed["loan_amount"] = float(loan_match.group(1).replace(',', ''))
+    elif home_price_match:
+        property_value = None
+        for group in home_price_match.groups():
+            if group:
+                property_value = float(group.replace(',', ''))
+                break
+        if property_value:
+            parsed["property_value"] = property_value
+            # Assume 80% LTV if no specific loan amount given
+            parsed["loan_amount"] = property_value * 0.8
+    
+    # Extract property address
+    address_match = re.search(r'property\s*(?:address|at|located)?\s*(?:is|:)?\s*([^,\n]+(?:,\s*[^,\n]+)*)', application_info, re.IGNORECASE)
+    if address_match:
+        parsed["property_address"] = address_match.group(1).strip()
+    
+    # Extract down payment - check percentage first, then dollar amount
+    down_percent_match = re.search(r'(\d+)%\s*down', info_lower)
+    down_payment_match = re.search(r'(?:down\s*payment)\s*(?:is|of)?\s*\$?([0-9,]+)', info_lower)
+    
+    if down_percent_match:
+        down_percent = float(down_percent_match.group(1)) / 100
+        if parsed["property_value"] > 0:
+            parsed["down_payment"] = parsed["property_value"] * down_percent
+        elif parsed["loan_amount"] > 0:
+            # Calculate property value from loan amount and down percent
+            parsed["property_value"] = parsed["loan_amount"] / (1 - down_percent)
+            parsed["down_payment"] = parsed["property_value"] * down_percent
+    elif down_payment_match:
+        parsed["down_payment"] = float(down_payment_match.group(1).replace(',', ''))
+    
+    # Extract credit score
+    credit_match = re.search(r'credit\s*(?:score)?\s*(?:is|of)?\s*(\d{3})', info_lower)
+    if credit_match:
+        parsed["credit_score"] = int(credit_match.group(1))
+    
+    # Extract monthly debts
+    debt_match = re.search(r'(?:monthly\s*)?debt(?:s)?\s*(?:is|of)?\s*\$?([0-9,]+)', info_lower)
+    if debt_match:
+        parsed["monthly_debts"] = float(debt_match.group(1).replace(',', ''))
+    
+    # Extract assets/savings
+    assets_match = re.search(r'(?:assets?|savings?|cash)\s*(?:is|of)?\s*\$?([0-9,]+)', info_lower)
+    if assets_match:
+        parsed["liquid_assets"] = float(assets_match.group(1).replace(',', ''))
+    
+    # Extract employment details
+    if 'self employed' in info_lower or 'self-employed' in info_lower:
+        parsed["employment_type"] = "self_employed"
+    elif 'contract' in info_lower:
+        parsed["employment_type"] = "contract"
+    
+    # Extract special conditions
+    if 'first time' in info_lower or 'first-time' in info_lower:
+        parsed["first_time_buyer"] = True
+    if 'military' in info_lower or 'veteran' in info_lower or 'va loan' in info_lower:
+        parsed["military_service"] = True
+    if 'rural' in info_lower or 'usda' in info_lower:
+        parsed["rural_property"] = True
+    
+    # Extract loan purpose
+    if 'refinance' in info_lower or 'refi' in info_lower:
+        parsed["loan_purpose"] = "refinance"
+    elif 'purchase' in info_lower or 'buying' in info_lower:
+        parsed["loan_purpose"] = "purchase"
+    
+    return parsed
 
 
 @tool
 def receive_mortgage_application(
-    first_name: str,
-    last_name: str,
-    date_of_birth: str,
-    ssn: str,
-    phone: str,
-    email: str,
-    current_street: str,
-    current_city: str,
-    current_state: str,
-    current_zip: str,
-    years_at_address: float,
-    employer_name: str,
-    job_title: str,
-    years_employed: float,
-    monthly_gross_income: float,
-    employment_type: str,
-    loan_purpose: str,
-    loan_amount: float,
-    property_address: str,
-    property_value: float,
-    property_type: str,
-    occupancy_type: str,
-    middle_name: str = "",
-    marital_status: str = "Single",
-    credit_score: int = 0,
-    monthly_debts: float = 0,
-    liquid_assets: float = 0,
-    down_payment: float = 0,
-    first_time_buyer: bool = False,
-    military_service: bool = False,
-    rural_property: bool = False
+    application_info: str
 ) -> str:
-    """Process complete mortgage application with real customer data.
+    """Process complete mortgage application with customer data.
     
-    This tool should ONLY be called after collecting all required information from the customer.
-    NEVER call this tool with fake or assumed data.
+    This tool should be called when you have collected comprehensive information from the customer
+    to submit a complete mortgage application. Provide all available customer information in natural language.
     
-    Args:
-        first_name: Customer's first name
-        last_name: Customer's last name
-        date_of_birth: Date of birth (YYYY-MM-DD format)
-        ssn: Social Security Number (xxx-xx-xxxx format)
-        phone: Phone number
-        email: Email address
-        current_street: Current street address
-        current_city: Current city
-        current_state: Current state (2-letter abbreviation)
-        current_zip: ZIP code
-        years_at_address: Years at current address
-        employer_name: Current employer name
-        job_title: Job title/position
-        years_employed: Years with current employer
-        monthly_gross_income: Monthly gross income
-        employment_type: Employment type (w2, self_employed, contract)
-        loan_purpose: Loan purpose (purchase, refinance, etc.)
-        loan_amount: Requested loan amount
-        property_address: Property address
-        property_value: Property value
-        property_type: Property type
-        occupancy_type: How property will be used
-        middle_name: Middle name (optional)
-        marital_status: Marital status (optional)
-        credit_score: Credit score (optional)
-        monthly_debts: Monthly debt payments (optional)
-        liquid_assets: Available assets (optional)
-        down_payment: Down payment amount (optional)
-        first_time_buyer: First-time buyer status (optional)
-        military_service: Military service status (optional)
-        rural_property: Rural property status (optional)
+    Example inputs:
+    "Sarah Johnson, SSN 123-45-6789, DOB 1985-03-15, phone 555-123-4567, email sarah@email.com, 
+     income $8500/month, looking at $450000 home with 15% down, credit score 720, property address 123 Oak St, Dallas TX"
+    
+    "Complete application: John Smith, born 1990-01-01, SSN 987-65-4321, phone 555-987-6543, 
+     email john@email.com, annual income $96000, loan amount $320000, property at 456 Pine Ave, Austin TX,
+     down payment $80000, employed 5 years as software engineer, first-time buyer"
     """
     
+    # Parse the natural language application info
+    parsed_info = parse_application_info(application_info)
+    
+    # Extract all parameters
+    first_name = parsed_info["first_name"]
+    last_name = parsed_info["last_name"]
+    ssn = parsed_info["ssn"]
+    date_of_birth = parsed_info["date_of_birth"]
+    phone = parsed_info["phone"]
+    email = parsed_info["email"]
+    current_street = parsed_info["current_street"]
+    current_city = parsed_info["current_city"]
+    current_state = parsed_info["current_state"]
+    current_zip = parsed_info["current_zip"]
+    years_at_address = parsed_info["years_at_address"]
+    employer_name = parsed_info["employer_name"]
+    job_title = parsed_info["job_title"]
+    years_employed = parsed_info["years_employed"]
+    monthly_gross_income = parsed_info["monthly_gross_income"]
+    employment_type = parsed_info["employment_type"]
+    loan_purpose = parsed_info["loan_purpose"]
+    loan_amount = parsed_info["loan_amount"]
+    property_address = parsed_info["property_address"]
+    property_value = parsed_info["property_value"]
+    property_type = parsed_info["property_type"]
+    occupancy_type = parsed_info["occupancy_type"]
+    middle_name = parsed_info["middle_name"]
+    marital_status = parsed_info["marital_status"]
+    credit_score = parsed_info["credit_score"]
+    monthly_debts = parsed_info["monthly_debts"]
+    liquid_assets = parsed_info["liquid_assets"]
+    down_payment = parsed_info["down_payment"]
+    first_time_buyer = parsed_info["first_time_buyer"]
+    military_service = parsed_info["military_service"]
+    rural_property = parsed_info["rural_property"]
+    
     try:
-        # Validate required fields
-        required_fields = {
+        # Validate ESSENTIAL required fields (only truly critical ones)
+        essential_fields = {
             'first_name': first_name,
             'last_name': last_name,
             'date_of_birth': date_of_birth,
             'ssn': ssn,
             'phone': phone,
             'email': email,
-            'current_street': current_street,
-            'current_city': current_city,
-            'current_state': current_state,
-            'current_zip': current_zip,
-            'employer_name': employer_name,
-            'job_title': job_title,
             'loan_purpose': loan_purpose,
+            'loan_amount': loan_amount,
             'property_address': property_address,
-            'property_type': property_type,
-            'occupancy_type': occupancy_type
+            'monthly_gross_income': monthly_gross_income
         }
         
-        # Check for missing required fields
-        missing_fields = [field for field, value in required_fields.items() if not value or str(value).strip() == ""]
+        # Check for missing essential fields only
+        missing_fields = [field for field, value in essential_fields.items() if not value or (isinstance(value, str) and str(value).strip() == "") or (isinstance(value, (int, float)) and value <= 0)]
         
         if missing_fields:
             return f"""
@@ -253,6 +381,21 @@ Ask the customer to provide the correct information and call this tool again.
             result = session.run(validation_query)
             validation_rules = [parse_neo4j_rule(dict(record['rule'])) for record in result]
         
+        # Handle optional fields with smart defaults
+        if not current_street or not current_city or not current_state:
+            current_street = current_street or "Address to be provided"
+            current_city = current_city or "City to be provided"  
+            current_state = current_state or "State to be provided"
+            current_zip = current_zip or "Zip to be provided"
+            
+        if not employer_name or not job_title:
+            employer_name = employer_name or "Employer to be provided"
+            job_title = job_title or "Position to be provided"
+            
+        if property_value <= 0:
+            # Estimate property value based on loan amount and typical LTV
+            property_value = loan_amount / 0.8  # Assume 80% LTV if not provided
+            
         # Generate application ID
         application_id = f"APP_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{last_name.upper()[:3]}"
         
@@ -525,37 +668,9 @@ def _validate_phone_format(phone: str) -> bool:
 def validate_tool() -> bool:
     """Validate that the receive_mortgage_application tool works correctly."""
     try:
-        # Test with sample data
+        # Test with sample natural language data
         result = receive_mortgage_application.invoke({
-            "first_name": "John",
-            "last_name": "Smith",
-            "ssn": "123-45-6789",
-            "date_of_birth": "1990-01-01",
-            "phone": "555-123-4567",
-            "email": "john.smith@email.com",
-            "current_street": "123 Main St",
-            "current_city": "Anytown",
-            "current_state": "CA",
-            "current_zip": "90210",
-            "years_at_address": 3.5,
-            "employer_name": "Tech Company Inc",
-            "job_title": "Software Engineer",
-            "years_employed": 4.0,
-            "monthly_gross_income": 8000.0,
-            "employment_type": "w2",
-            "loan_purpose": "purchase",
-            "loan_amount": 400000.0,
-            "property_address": "456 Oak Ave, Anytown, CA 90210",
-            "property_value": 500000.0,
-            "property_type": "single_family_detached",
-            "occupancy_type": "primary_residence",
-            "credit_score": 720,
-            "monthly_debts": 1200.0,
-            "liquid_assets": 100000.0,
-            "down_payment": 100000.0,
-            "first_time_buyer": False,
-            "military_service": False,
-            "rural_property": False
+            "application_info": "John Smith, SSN 123-45-6789, DOB 1990-01-01, phone 555-123-4567, email john.smith@email.com, income $8000/month, loan amount $400000, property address 456 Oak Ave Anytown CA 90210, credit score 720, down payment $100000"
         })
         return "MORTGAGE APPLICATION INTAKE REPORT" in result and "APPLICATION STATUS" in result
     except Exception as e:

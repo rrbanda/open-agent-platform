@@ -23,7 +23,6 @@ Tools (All 5 implemented - 100% data-driven from Neo4j):
 - receive_mortgage_application: Complete application intake with validation and initial processing
 - check_application_completeness: Verify all required documentation and data completeness
 - perform_initial_qualification: Initial qualification assessment and loan program recommendations
-- coordinate_workflow_routing: Intelligent routing decisions across the agent workflow
 - track_application_status: Comprehensive status tracking and milestone management
 
 Benefits:
@@ -39,7 +38,6 @@ from .tools import (
     receive_mortgage_application,
     check_application_completeness,
     perform_initial_qualification,
-    coordinate_workflow_routing,
     track_application_status,
     get_all_application_agent_tools,
     validate_all_tools
@@ -58,7 +56,6 @@ __all__ = [
     "receive_mortgage_application",
     "check_application_completeness",
     "perform_initial_qualification",
-    "coordinate_workflow_routing",
     "track_application_status",
     
     # Tool management

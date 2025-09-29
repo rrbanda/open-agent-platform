@@ -7,6 +7,7 @@ Connects to running server at http://127.0.0.1:2024
 """
 
 import sys
+import os
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -20,7 +21,7 @@ console = Console()
 # Agent system API configuration
 LANGGRAPH_URL = "http://127.0.0.1:2024"
 
-def typewriter_effect(text, delay=0.03, style="bold green"):
+def typewriter_effect(text, delay=0.005, style="bold green"):
     """Create a typewriter effect for text - LARGE for screen sharing"""
     rich_text = Text()
     
@@ -69,6 +70,52 @@ def check_server_status():
         return response.status_code == 200
     except:
         return False
+
+def load_sample_document(filename):
+    """Load sample document content from docs folder"""
+    try:
+        # Get the project root directory (two levels up from tests)
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        doc_path = os.path.join(project_root, "docs", "sample_documents", filename)
+        
+        with open(doc_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        console.print(f"[red]Warning: Could not load {filename}: {e}[/red]")
+        return f"[Sample {filename} content would be processed here]"
+
+def create_document_upload_message():
+    """Create realistic document upload message with actual document content"""
+    
+    # Load sample documents
+    w2_content = load_sample_document("w2_2023_sarah_johnson.txt")
+    paystub_content = load_sample_document("paystub_nov_2024_sarah_johnson.txt")
+    bank_statement_content = load_sample_document("bank_statement_nov_2024_sarah_johnson.txt")
+    
+    # Create comprehensive document upload message
+    message = f"""Hi, I just uploaded my financial documents. Can you process these and let me know what else you need?
+
+**Document 1: 2023 W-2 Tax Form**
+Filename: w2_2023_sarah_johnson.pdf
+Document Type: w2
+Content:
+{w2_content[:500]}...
+
+**Document 2: Recent Pay Stub** 
+Filename: paystub_nov_2024_sarah_johnson.pdf
+Document Type: paystub  
+Content:
+{paystub_content[:500]}...
+
+**Document 3: Bank Statement**
+Filename: bank_statement_nov_2024_sarah_johnson.pdf
+Document Type: bank_statement
+Content:
+{bank_statement_content[:500]}...
+
+Please process these documents and let me know if you need anything else for my mortgage application."""
+
+    return message
 
 def create_demo_assistant():
     """Create a new demo assistant for mortgage processing"""
@@ -523,251 +570,213 @@ def auto_demo():
     
     console.print(f"🎯 [bold green]Conversation ready: {thread_id}[/bold green]")
     
-    # Applicant profile with enhanced styling
+    # Customer profile for the mortgage journey
     console.print()
     profile_table = Table(show_header=False, box=None, padding=(0, 2))
     profile_table.add_column(style="bold blue")
     profile_table.add_column(style="white")
-    profile_table.add_row("👤 Name:", "Sarah Johnson")
-    profile_table.add_row("🏠 Status:", "First-time buyer")
-    profile_table.add_row("💰 Income:", "$95,000/year")
-    profile_table.add_row("💳 Savings:", "$60,000 down payment")
-    profile_table.add_row("🎯 Target:", "$450,000 home")
+    profile_table.add_row("👤 Customer:", "Sarah Johnson")
+    profile_table.add_row("🏠 Status:", "First-time homebuyer")
+    profile_table.add_row("💰 Monthly Income:", "$8,500")
+    profile_table.add_row("💳 Down Payment:", "$67,500 (15%)")
+    profile_table.add_row("🎯 Target Home:", "$450,000")
+    profile_table.add_row("📊 Credit Score:", "720")
     
     console.print(Panel(
         profile_table,
-        title="[bold blue]🏠 Applicant Profile[/bold blue]",
+        title="[bold blue]🏠 Customer Profile[/bold blue]",
         border_style="blue",
         padding=(1, 2)
     ))
     time.sleep(2)
     
-    # STEP 1: Affordability Analysis
-    print_section_header("STEP 1: Affordability Analysis", "📊", "yellow")
+    # STEP 1: Initial Mortgage Inquiry
+    print_section_header("STEP 1: Initial Mortgage Inquiry", "🏠", "yellow")
     
-    # Typewriter effect for Sarah's question
     console.print("[bold green]👤 Sarah asks:[/bold green]")
     typewriter_effect(
-        "I'm a first-time homebuyer making $95,000/year with $60,000 saved. How much house can I afford, and what would my monthly payments be?",
+        "Hi! I want to apply for a mortgage. I'm Sarah Johnson, my income is $8,500/month, and I'm looking at a $450,000 home with 15% down.",
         delay=0.02,
         style="italic bright_green"
     )
     
-    affordability_message = "I'm Sarah Johnson, a first-time homebuyer. I make $95,000 annually as a software engineer and have $60,000 saved. I have $850 in monthly debts. How much house can I afford and what would my monthly payments be for different loan amounts?"
+    initial_inquiry = "I want to apply for a mortgage. I'm Sarah Johnson, my income is $8,500/month, and I'm looking at a $450,000 home with 15% down."
     
-    # Progress indicator for affordability analysis
-    show_compact_progress("🔄 Analyzing affordability with mortgage advisor...", "bold bright_cyan")
+    show_compact_progress("🔄 Routing to application specialist...", "bold bright_cyan")
     
-    result_1 = invoke_assistant(assistant_id, thread_id, affordability_message)
+    result_1 = invoke_assistant(assistant_id, thread_id, initial_inquiry)
+    show_execution_details(result_1, "MORTGAGE APPLICATION START")
     
-    show_execution_details(result_1, "AFFORDABILITY ANALYSIS")
-    
-    # LARGE step completion for screen sharing
     completion_text = Text()
-    completion_text.append("\n🎯  STEP 1 COMPLETED SUCCESSFULLY  🎯\n\n", style="bold bright_green")
-    completion_text.append("✅ Affordability analysis via system API\n", style="bright_white")
-    completion_text.append("✅ Real agent coordination demonstrated\n", style="bright_white")
+    completion_text.append("\n🎯  APPLICATION INITIATED  🎯\n\n", style="bold bright_green")
+    completion_text.append("✅ Customer routed to application agent\n", style="bright_white")
+    completion_text.append("✅ Initial qualification assessment started\n", style="bright_white")
     
     console.print(Panel(
         completion_text,
         border_style="bright_green",
         padding=(0, 2),
-        title="[bold bright_white]📋 STEP 1 RESULTS 📋[/bold bright_white]",
+        title="[bold bright_white]📋 STEP 1 COMPLETE 📋[/bold bright_white]",
         title_align="center"
     ))
     time.sleep(1)
     
-    # STEP 2: Loan Program Comparison
-    print_section_header("STEP 2: Loan Program Comparison", "💰", "green")
+    # STEP 2: Loan Program Recommendation  
+    print_section_header("STEP 2: Loan Program Guidance", "💰", "green")
     
     console.print("[bold green]👤 Sarah asks:[/bold green]")
     typewriter_effect(
-        "Based on my profile, what specific loan programs am I eligible for? I want to compare FHA, Conventional, and VA options.",
+        "I'm a first-time buyer with a 650 credit score and $67,500 down payment. What loan programs would work best for me?",
         delay=0.02,
         style="italic bright_green"
     )
     
-    loan_comparison = """Based on my profile - 720 credit score, $95,000 income, $60,000 down payment, $850 monthly debts, first-time buyer looking at a $450,000 suburban single-family home - what specific loan programs am I eligible for? I want to understand FHA vs Conventional vs VA options, down payment requirements, and qualification details."""
+    loan_guidance = "I'm a first-time buyer with a 650 credit score and $67,500 down payment. What loan programs would work best for me?"
     
-    # Progress indicator for loan program analysis
-    show_compact_progress("🔄 Comparing loan programs with Neo4j business rules...", "bold bright_cyan")
+    show_compact_progress("🔄 Consulting mortgage advisor for program recommendations...", "bold bright_cyan")
     
-    result_2 = invoke_assistant(assistant_id, thread_id, loan_comparison)
+    result_2 = invoke_assistant(assistant_id, thread_id, loan_guidance)
+    show_execution_details(result_2, "LOAN PROGRAM RECOMMENDATION")
     
-    show_execution_details(result_2, "LOAN PROGRAM COMPARISON")
-    
-    # LARGE step completion for screen sharing
     completion_text = Text()
-    completion_text.append("\n🎯  STEP 2 COMPLETED SUCCESSFULLY  🎯\n\n", style="bold bright_green")
-    completion_text.append("✅ Loan programs analyzed via Neo4j business rules\n", style="bright_white")
-    completion_text.append("✅ Real business tool execution demonstrated\n", style="bright_white")
+    completion_text.append("\n🎯  LOAN GUIDANCE PROVIDED  🎯\n\n", style="bold bright_green")
+    completion_text.append("✅ Personalized loan program recommendations\n", style="bright_white")
+    completion_text.append("✅ First-time buyer programs identified\n", style="bright_white")
+    
+    console.print(Panel(
+        completion_text,
+        border_style="bright_green", 
+        padding=(0, 2),
+        title="[bold bright_white]📋 STEP 2 COMPLETE 📋[/bold bright_white]",
+        title_align="center"
+    ))
+    time.sleep(1)
+    
+    # STEP 3: Document Upload Process
+    print_section_header("STEP 3: Document Processing", "📄", "cyan")
+    
+    console.print("[bold green]👤 Sarah asks:[/bold green]")
+    typewriter_effect(
+        "Hi, I just uploaded my W-2 and pay stubs. Can you process these and let me know what else you need?",
+        delay=0.02,
+        style="italic bright_green"
+    )
+    
+    # Show document loading process
+    console.print(Panel(
+        "[bold bright_blue]📁 LOADING SAMPLE DOCUMENTS...\n\n"
+        "✅ Reading W-2 tax form (w2_2023_sarah_johnson.pdf)\n"
+        "✅ Reading pay stub (paystub_nov_2024_sarah_johnson.pdf)\n" 
+        "✅ Reading bank statement (bank_statement_nov_2024_sarah_johnson.pdf)\n\n"
+        "📊 Real document content loaded for demonstration",
+        title="[bold bright_white]📂 DOCUMENT PREPARATION 📂[/bold bright_white]",
+        border_style="bright_blue",
+        padding=(0, 2)
+    ))
+    time.sleep(2)
+    
+    # Load sample documents and create realistic document upload message
+    document_upload = create_document_upload_message()
+    
+    show_compact_progress("🔄 Processing documents with document agent...", "bold bright_cyan")
+    
+    result_3 = invoke_assistant(assistant_id, thread_id, document_upload)
+    show_execution_details(result_3, "DOCUMENT PROCESSING")
+    
+    completion_text = Text()
+    completion_text.append("\n🎯  DOCUMENTS PROCESSED  🎯\n\n", style="bold bright_green")
+    completion_text.append("✅ W-2 and pay stubs reviewed\n", style="bright_white")
+    completion_text.append("✅ Additional document requirements provided\n", style="bright_white")
     
     console.print(Panel(
         completion_text,
         border_style="bright_green",
         padding=(0, 2),
-        title="[bold bright_white]📋 STEP 2 RESULTS 📋[/bold bright_white]",
+        title="[bold bright_white]📋 STEP 3 COMPLETE 📋[/bold bright_white]",
         title_align="center"
     ))
     time.sleep(1)
     
-    # STEP 3: Pre-Approval Application
-    print_section_header("STEP 3: Pre-Approval Application", "📋", "cyan")
+    # STEP 4: Property Appraisal
+    print_section_header("STEP 4: Property Appraisal", "🏘️", "blue")
     
     console.print("[bold green]👤 Sarah asks:[/bold green]")
     typewriter_effect(
-        "I'd like to get pre-approved. What information do you need and what documents should I prepare?",
+        "I found a house at 123 Oak Street, Austin, TX. It's listed for $450,000. Can you evaluate if this is a good value?",
         delay=0.02,
         style="italic bright_green"
     )
     
-    preapproval_input = """I'd like to apply for pre-approval for a mortgage. Here's my information:
-- Name: Sarah Johnson, DOB: 1994-08-15, SSN: 123-45-6789
-- Contact: 512-555-0123, sarah.johnson@email.com  
-- Current Address: 2100 Guadalupe St, Austin, TX 78705 (3 years)
-- Employment: TechCorp Austin, Senior Software Engineer (4 years), $95,000 annual
-- Financial: Credit score 720, $850 monthly debts, $60,000 in savings
-- Target: Pre-approval for up to $450,000 home purchase, first-time buyer
-What documents do I need to provide and what's the next step?"""
+    property_evaluation = "I found a house at 123 Oak Street, Austin, TX. It's listed for $450,000. Can you evaluate if this is a good value?"
     
-    result_3 = invoke_assistant(assistant_id, thread_id, preapproval_input)
-    show_execution_details(result_3, "PRE-APPROVAL APPLICATION")
+    show_compact_progress("🔄 Routing to appraisal specialist for property analysis...", "bold bright_cyan")
     
-    # Enhanced application ID extraction and storage confirmation
-    app_id = None
-    storage_confirmed = False
+    result_4 = invoke_assistant(assistant_id, thread_id, property_evaluation)
+    show_execution_details(result_4, "PROPERTY APPRAISAL")
     
-    if result_3:
-        messages = result_3.get("messages", [])
-        for msg in messages:
-            content = str(msg.get("content", ""))
-            
-            # Extract application ID
-            if "APP_" in content:
-                import re
-                match = re.search(r'APP_\d{8}_\d{6}_[A-Z]{3}', content)
-                if not match:
-                    match = re.search(r'APP_\w+', content)
-                if match:
-                    app_id = match.group(0)
-                    
-                    # Enhanced application submission display
-                    console.print()
-                    console.print(Panel(
-                        f"[bold bright_green]✅ APPLICATION SUBMITTED SUCCESSFULLY\n\n"
-                        f"📋 Application ID: {app_id}\n"
-                        f"📅 Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                        f"👤 Applicant: Sarah Johnson\n"
-                        f"🏠 Loan Amount: $390,000 for $450,000 home",
-                        title="[bold bright_white]📝 APPLICATION INTAKE COMPLETE 📝[/bold bright_white]",
-                        border_style="bright_green",
-                        padding=(0, 2)
-                    ))
-                    
-            # Check for storage confirmation
-            if "STORAGE" in content or "stored in Neo4j" in content:
-                storage_confirmed = True
+    completion_text = Text()
+    completion_text.append("\n🎯  PROPERTY EVALUATED  🎯\n\n", style="bold bright_green")
+    completion_text.append("✅ Market analysis completed\n", style="bright_white")
+    completion_text.append("✅ Comparable sales reviewed\n", style="bright_white")
     
-    # Show storage status
-    if app_id and storage_confirmed:
-        console.print(Panel(
-            f"[bold bright_cyan]🗄️ APPLICATION DATA STORED\n\n"
-            f"✅ Saved to Neo4j database\n"
-            f"✅ Available for all agents\n"
-            f"✅ Cross-agent workflow enabled",
-            title="[bold bright_white]💾 DATA STORAGE CONFIRMED 💾[/bold bright_white]",
-            border_style="bright_cyan",
-            padding=(0, 2)
-        ))
-    elif app_id:
-        console.print(Panel(
-            f"[bold yellow]⚠️ Application ID: {app_id}\n"
-            f"📋 Application received but storage status unclear",
-            border_style="yellow",
-            padding=(0, 2)
-        ))
-    
-    console.print(Panel("🎯 [bold green]Step 3 Complete: Pre-approval application with database storage[/bold green]", border_style="green"))
-    time.sleep(2)
-    
-    # STEP 4: Document Preparation
-    print_section_header("STEP 4: Document Preparation", "📄", "blue")
-    
-    console.print("[bold green]👤 Sarah asks:[/bold green]")
-    typewriter_effect(
-        "I want to prepare all my documents. What exactly do I need for my loan type and how should I organize them?",
-        delay=0.02,
-        style="italic bright_green"
-    )
-    
-    doc_prep = "Based on my pre-approval application, what specific documents do I need to gather? I'm applying for a conventional loan as a first-time buyer. Please give me a detailed checklist and any tips for organizing the documents."
-    
-    result_4 = invoke_assistant(assistant_id, thread_id, doc_prep)
-    show_execution_details(result_4, "DOCUMENT PREPARATION")
-    
-    # Show application status tracking
-    if app_id:
-        console.print(Panel(
-            f"[bold bright_magenta]📈 APPLICATION STATUS UPDATE\n\n"
-            f"📋 Application ID: {app_id}\n"
-            f"📊 Status: DOCUMENT_PREPARATION\n"
-            f"🔄 Next: UNDERWRITING_REVIEW\n"
-            f"⏱️ Progress: Document requirements provided",
-            title="[bold bright_white]🔄 STATUS TRACKING 🔄[/bold bright_white]",
-            border_style="bright_magenta",
-            padding=(0, 2)
-        ))
-    
-    console.print(Panel("🎯 [bold green]Step 4 Complete: Document guidance via system API[/bold green]", border_style="green"))
-    time.sleep(2)
-    
-    # STEP 5: Underwriting & Final Decision
-    print_section_header("STEP 5: Underwriting & Final Decision", "⚖️", "red")
-    
-    console.print("[bold green]👤 Sarah asks:[/bold green]")
-    typewriter_effect(
-        "I've submitted all my documents. Can you run the underwriting analysis and give me a final decision?",
-        delay=0.02,
-        style="italic bright_green"
-    )
-    
-    # Show application retrieval for underwriting
-    if app_id:
-        console.print(Panel(
-            f"[bold bright_blue]🔍 RETRIEVING APPLICATION DATA\n\n"
-            f"📋 Application ID: {app_id}\n"
-            f"🗄️ Accessing stored application from Neo4j\n"
-            f"⚖️ Preparing for underwriting analysis",
-            title="[bold bright_white]📊 APPLICATION RETRIEVAL 📊[/bold bright_white]",
-            border_style="bright_blue",
-            padding=(0, 2)
-        ))
-        
-    underwriting = f"""Please perform the complete underwriting analysis for my application{' (ID: ' + app_id + ')' if app_id else ''}. Based on my 720 credit score, $95,000 income, $60,000 down payment, $850 monthly debts, stable employment, and the conventional loan program I selected, what's the final underwriting decision?"""
-    
-    result_5 = invoke_assistant(assistant_id, thread_id, underwriting)
-    show_execution_details(result_5, "UNDERWRITING DECISION")
-    
-    console.print(Panel("🎯 [bold green]Step 5 Complete: Final underwriting decision[/bold green]", border_style="green"))
-    
-    # Summary
     console.print(Panel(
-        "[bold blue]📊 Mortgage Journey Summary[/bold blue]\n" +
-        "🎯 Step 1: Affordability analysis with income/debt calculations\n" +
-        "🎯 Step 2: Loan program comparison using business rules\n" +
-        "🎯 Step 3: Pre-approval application with document requirements\n" +
-        "🎯 Step 4: Document preparation guidance and checklist\n" +
-        "🎯 Step 5: Complete underwriting analysis and final decision\n" +
-        "🎯 Result: End-to-end mortgage workflow with business rule processing",
+        completion_text,
+        border_style="bright_green",
+        padding=(0, 2),
+        title="[bold bright_white]📋 STEP 4 COMPLETE 📋[/bold bright_white]",
+        title_align="center"
+    ))
+    time.sleep(1)
+    
+    # STEP 5: Final Underwriting Decision
+    print_section_header("STEP 5: Final Underwriting Decision", "⚖️", "red")
+    
+    console.print("[bold green]👤 Sarah asks:[/bold green]")
+    typewriter_effect(
+        "My credit score is 720, I make $102,000 annually, and I have everything documented. Can you give me my final loan approval decision?",
+        delay=0.02,
+        style="italic bright_green"
+    )
+    
+    final_underwriting = "My credit score is 720, I make $102,000 annually, and I have everything documented. Can you give me my final loan approval decision?"
+    
+    show_compact_progress("🔄 Routing to underwriting team for final decision...", "bold bright_cyan")
+    
+    result_5 = invoke_assistant(assistant_id, thread_id, final_underwriting)
+    show_execution_details(result_5, "FINAL UNDERWRITING DECISION")
+    
+    completion_text = Text()
+    completion_text.append("\n🎯  MORTGAGE JOURNEY COMPLETE  🎯\n\n", style="bold bright_green")
+    completion_text.append("✅ End-to-end mortgage process demonstrated\n", style="bright_white")
+    completion_text.append("✅ All specialized agents coordinated seamlessly\n", style="bright_white")
+    
+    console.print(Panel(
+        completion_text,
+        border_style="bright_green",
+        padding=(0, 2),
+        title="[bold bright_white]🏆 FINAL DECISION 🏆[/bold bright_white]",
+        title_align="center"
+    ))
+    time.sleep(1)
+    
+    # Complete mortgage journey summary
+    console.print(Panel(
+        "[bold blue]🏠 Complete Mortgage Journey[/bold blue]\n" +
+        "🎯 Step 1: Initial mortgage inquiry → Application specialist\n" +
+        "🎯 Step 2: Loan program guidance → Mortgage advisor\n" +
+        "🎯 Step 3: Document processing → Document specialist\n" +
+        "🎯 Step 4: Property appraisal → Appraisal specialist\n" +
+        "🎯 Step 5: Final underwriting → Underwriting specialist\n" +
+        "🎯 Result: Seamless customer experience with specialized expertise",
         border_style="blue"
     ))
     
     console.print(Panel(
-        "[bold green]🎉 Mortgage Journey Complete![/bold green]\n" +
-        "Demonstrated step-by-step mortgage process with:\n" +
-        "• Affordability analysis • Loan program comparison\n" +
-        "• Pre-approval process • Document preparation\n" +
-        "• Underwriting analysis • Final lending decision",
+        "[bold green]🎉 End-to-End Mortgage System Demonstrated![/bold green]\n" +
+        "Sarah's complete homebuying journey powered by:\n" +
+        "• Intelligent agent routing • Specialized mortgage expertise\n" +
+        "• Real-time document processing • Automated appraisal analysis\n" +
+        "• Comprehensive underwriting • Seamless customer experience",
         border_style="green"
     ))
     

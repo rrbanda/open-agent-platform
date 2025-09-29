@@ -131,8 +131,10 @@ def _get_required_documents_from_rules(connection, loan_program: Optional[str]) 
         # Process results into document list
         required_docs = []
         seen_types = set()
+        # Convert to list to avoid consumption errors
+        records = list(result)
         
-        for record in result:
+        for record in records:
             doc_type = record.get("document_type")
             description = record.get("description")
             

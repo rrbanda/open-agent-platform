@@ -7,8 +7,7 @@ Form 1003 from application data using Neo4j URLA rules for agentic compliance.
 
 import json
 import logging
-from typing import Dict, List, Any, Optional
-from pydantic import BaseModel, Field
+from typing import Dict, Any
 from langchain_core.tools import tool
 from datetime import datetime
 import uuid
@@ -35,130 +34,101 @@ def parse_neo4j_rule(rule_dict: Dict[str, Any]) -> Dict[str, Any]:
     return parsed_rule
 
 
-class URLAGenerationRequest(BaseModel):
-    """URLA Form 1003 generation request parameters."""
-    
-    # Application Source Data
-    application_id: str = Field(..., description="Source application ID")
-    
-    # Section 1: Borrower Information
-    first_name: str = Field(..., description="Borrower first name")
-    last_name: str = Field(..., description="Borrower last name")
-    middle_name: Optional[str] = Field(None, description="Borrower middle name")
-    suffix: Optional[str] = Field(None, description="Name suffix (Jr, Sr, III, etc.)")
-    ssn: str = Field(..., description="Social Security Number")
-    date_of_birth: str = Field(..., description="Date of birth (MM/DD/YYYY)")
-    phone: str = Field(..., description="Home phone number")
-    email: str = Field(..., description="Email address")
-    marital_status: Optional[str] = Field(None, description="Marital status")
-    number_of_dependents: Optional[int] = Field(None, description="Number of dependents")
-    
-    # Current Address
-    current_street: str = Field(..., description="Current street address")
-    current_city: str = Field(..., description="Current city")
-    current_state: str = Field(..., description="Current state")
-    current_zip: str = Field(..., description="Current ZIP code")
-    years_at_address: float = Field(..., description="Years at current address")
-    monthly_housing_expense: Optional[float] = Field(None, description="Monthly housing payment")
-    
-    # Employment Information
-    employer_name: str = Field(..., description="Current employer name")
-    job_title: str = Field(..., description="Position/title")
-    years_employed: float = Field(..., description="Years with current employer")
-    monthly_gross_income: float = Field(..., description="Monthly gross income")
-    employment_type: str = Field(..., description="Employment type (w2, self_employed, etc.)")
-    
-    # Financial Information - Assets
-    checking_account_balance: Optional[float] = Field(None, description="Checking account balance")
-    savings_account_balance: Optional[float] = Field(None, description="Savings account balance")
-    investment_account_balance: Optional[float] = Field(None, description="Investment account balance")
-    retirement_account_balance: Optional[float] = Field(None, description="Retirement account balance")
-    other_assets_value: Optional[float] = Field(None, description="Other assets value")
-    
-    # Financial Information - Liabilities
-    monthly_debts: Optional[float] = Field(None, description="Total monthly debt payments")
-    installment_debt_balance: Optional[float] = Field(None, description="Installment debt balance")
-    revolving_debt_balance: Optional[float] = Field(None, description="Revolving debt balance")
-    mortgage_debt_balance: Optional[float] = Field(None, description="Existing mortgage balance")
-    
-    # Loan and Property Information
-    loan_amount: float = Field(..., description="Requested loan amount")
-    loan_purpose: str = Field(..., description="Purpose of loan (Purchase, Refinance, etc.)")
-    property_address: str = Field(..., description="Subject property address")
-    property_type: str = Field(..., description="Property type")
-    occupancy_type: str = Field(..., description="Occupancy type")
-    property_value: Optional[float] = Field(None, description="Property value")
-    down_payment: Optional[float] = Field(None, description="Down payment amount")
-    
-    # Declarations (Yes/No questions)
-    outstanding_judgments: bool = Field(default=False, description="Outstanding judgments")
-    declared_bankruptcy: bool = Field(default=False, description="Declared bankruptcy in past 7 years")
-    foreclosure_or_deed: bool = Field(default=False, description="Foreclosure or deed in lieu")
-    party_to_lawsuit: bool = Field(default=False, description="Party to lawsuit")
-    us_citizen: bool = Field(default=True, description="US citizen")
-    permanent_resident: bool = Field(default=False, description="Permanent resident alien")
-    
-    # Military Service
-    military_service: bool = Field(default=False, description="Military service")
-    military_status: Optional[str] = Field(None, description="Military status if applicable")
+def get_application_data_from_neo4j(application_id: str) -> Dict[str, Any]:
+    """Retrieve complete application data from Neo4j database."""
+    try:
+        initialize_connection()
+        connection = get_neo4j_connection()
+        
+        with connection.driver.session(database=connection.database) as session:
+            # Query to get application data
+            application_query = """
+            MATCH (app:MortgageApplication {application_id: $application_id})
+            RETURN app
+            """
+            result = session.run(application_query, {"application_id": application_id})
+            record = result.single()
+            
+            if not record:
+                return {"error": f"Application {application_id} not found"}
+                
+            app_data = dict(record['app'])
+            return app_data
+            
+    except Exception as e:
+        logger.error(f"Error retrieving application data: {e}")
+        return {"error": f"Database error: {str(e)}"}
 
 
-@tool(args_schema=URLAGenerationRequest)
+@tool
 def generate_urla_1003_form(
-    application_id: str,
-    first_name: str,
-    last_name: str,
-    ssn: str,
-    date_of_birth: str,
-    phone: str,
-    email: str,
-    current_street: str,
-    current_city: str,
-    current_state: str,
-    current_zip: str,
-    years_at_address: float,
-    employer_name: str,
-    job_title: str,
-    years_employed: float,
-    monthly_gross_income: float,
-    employment_type: str,
-    loan_amount: float,
-    loan_purpose: str,
-    property_address: str,
-    property_type: str,
-    occupancy_type: str,
-    middle_name: Optional[str] = None,
-    suffix: Optional[str] = None,
-    marital_status: Optional[str] = None,
-    number_of_dependents: Optional[int] = None,
-    monthly_housing_expense: Optional[float] = None,
-    checking_account_balance: Optional[float] = None,
-    savings_account_balance: Optional[float] = None,
-    investment_account_balance: Optional[float] = None,
-    retirement_account_balance: Optional[float] = None,
-    other_assets_value: Optional[float] = None,
-    monthly_debts: Optional[float] = None,
-    installment_debt_balance: Optional[float] = None,
-    revolving_debt_balance: Optional[float] = None,
-    mortgage_debt_balance: Optional[float] = None,
-    property_value: Optional[float] = None,
-    down_payment: Optional[float] = None,
-    outstanding_judgments: bool = False,
-    declared_bankruptcy: bool = False,
-    foreclosure_or_deed: bool = False,
-    party_to_lawsuit: bool = False,
-    us_citizen: bool = True,
-    permanent_resident: bool = False,
-    military_service: bool = False,
-    military_status: Optional[str] = None
+    application_id: str
 ) -> str:
     """
-    Generate URLA Form 1003 using Neo4j URLA rules for agentic compliance.
+    Generate URLA Form 1003 from stored application data.
     
-    This tool creates a standardized URLA Form 1003 from application data,
-    ensuring compliance with Fannie Mae/Freddie Mac requirements and 
-    proper field mapping according to current URLA specifications.
+    This tool retrieves complete application data from Neo4j and generates
+    the standardized URLA Form 1003. Only requires the application ID.
+    
+    Args:
+        application_id: The application ID to generate the form for
+        
+    Example:
+        "Generate URLA form for application APP_20240315_143022_JOH"
     """
+    
+    # Get application data from Neo4j
+    app_data = get_application_data_from_neo4j(application_id)
+    
+    if "error" in app_data:
+        return f"❌ Error: {app_data['error']}"
+    
+    # Extract all the required parameters from stored data
+    first_name = app_data.get("first_name", "")
+    last_name = app_data.get("last_name", "")
+    ssn = app_data.get("ssn", "")
+    date_of_birth = app_data.get("date_of_birth", "")
+    phone = app_data.get("phone", "")
+    email = app_data.get("email", "")
+    current_street = app_data.get("current_street", "")
+    current_city = app_data.get("current_city", "")
+    current_state = app_data.get("current_state", "")
+    current_zip = app_data.get("current_zip", "")
+    years_at_address = app_data.get("years_at_address", 0.0)
+    employer_name = app_data.get("employer_name", "")
+    job_title = app_data.get("job_title", "")
+    years_employed = app_data.get("years_employed", 0.0)
+    monthly_gross_income = app_data.get("monthly_gross_income", 0.0)
+    employment_type = app_data.get("employment_type", "w2")
+    loan_amount = app_data.get("loan_amount", 0.0)
+    loan_purpose = app_data.get("loan_purpose", "purchase")
+    property_address = app_data.get("property_address", "")
+    property_type = app_data.get("property_type", "single_family_detached")
+    occupancy_type = app_data.get("occupancy_type", "primary_residence")
+    middle_name = app_data.get("middle_name", "")
+    suffix = app_data.get("suffix", "")
+    marital_status = app_data.get("marital_status", "Single")
+    number_of_dependents = app_data.get("number_of_dependents", 0)
+    monthly_housing_expense = app_data.get("monthly_housing_expense", 0.0)
+    checking_account_balance = app_data.get("checking_account_balance", 0.0)
+    savings_account_balance = app_data.get("savings_account_balance", 0.0)
+    investment_account_balance = app_data.get("investment_account_balance", 0.0)
+    retirement_account_balance = app_data.get("retirement_account_balance", 0.0)
+    other_assets_value = app_data.get("other_assets_value", 0.0)
+    monthly_debts = app_data.get("monthly_debts", 0.0)
+    installment_debt_balance = app_data.get("installment_debt_balance", 0.0)
+    revolving_debt_balance = app_data.get("revolving_debt_balance", 0.0)
+    mortgage_debt_balance = app_data.get("mortgage_debt_balance", 0.0)
+    property_value = app_data.get("property_value", 0.0)
+    down_payment = app_data.get("down_payment", 0.0)
+    outstanding_judgments = app_data.get("outstanding_judgments", False)
+    declared_bankruptcy = app_data.get("declared_bankruptcy", False)
+    foreclosure_or_deed = app_data.get("foreclosure_or_deed", False)
+    party_to_lawsuit = app_data.get("party_to_lawsuit", False)
+    us_citizen = app_data.get("us_citizen", True)
+    permanent_resident = app_data.get("permanent_resident", False)
+    military_service = app_data.get("military_service", False)
+    military_status = app_data.get("military_status", "")
     
     try:
         # Initialize Neo4j connection
